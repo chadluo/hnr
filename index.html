@@ -69,6 +69,9 @@
           font-size: 1rem;
         }
       }
+      .comments {
+        font-size: 0.75em;
+      }
     </style>
   </head>
   <body>
@@ -102,7 +105,12 @@
 
       function render(items) {
         document.getElementById("news").innerHTML = items
-          .map((i) => `<div><a href="${i.url || HACKER_NEWS_ITEM + i.id}">${i.title}</a></div>`)
+          .map(
+            (i) =>
+              `<div><a href="${i.url || HACKER_NEWS_ITEM + i.id}">${i.title}</a>${
+                i.url === undefined ? "" : ` <a class="comments" href="${HACKER_NEWS_ITEM + i.id}">(…)</a>`
+              }</div>`
+          )
           .join("");
       }
 
