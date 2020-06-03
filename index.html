@@ -23,6 +23,8 @@
       "use strict";
       const HACKER_NEWS_API = "https://hacker-news.firebaseio.com/v0";
       const HACKER_NEWS_ITEM = `https://news.ycombinator.com/item?id=`;
+      const CACHED_ITEMS_KEY = "cachedItems";
+      const CACHE_UPDATE_TIME_KEY = "cacheUpdated";
 
       function render(items) {
         document.getElementById("news").innerHTML = items
@@ -30,16 +32,23 @@
           .join("");
       }
 
-      async function refreshHackerNews() {
-        fetch(
-          `${HACKER_NEWS_API}/topstories.json?limitToFirst=30&orderBy="$priority"`
-        )
+      function store(items) {
+        localStorage.setItem(CACHED_ITEMS_KEY, JSON.stringify(items));
+        localStorage.setItem(CACHE_UPDATE_TIME_KEY, new Date());
+      }
+
+      function refreshHackerNews() {
+        fetch(`${HACKER_NEWS_API}/topstories.json?limitToFirst=30&orderBy="$priority"`)
           .then(status)
           .then(json)
           .then((topStoryIds) => {
-            return Promise.all(topStoryIds.map(news_item));
+            let cachedItems = JSON.parse(localStorage.getItem(CACHED_ITEMS_KEY) || "[]");
+            return Promise.all(topStoryIds.map((i) => news_item(cachedItems, i)));
           })
-          .then(render);
+          .then((items) => {
+            render(items);
+            store(items);
+          });
       }
 
       function status(response) {
@@ -54,15 +63,18 @@
         return response.json();
       }
 
-      function news_item(id) {
-        return fetch(`${HACKER_NEWS_API}/item/${id}.json`)
-          .then(status)
-          .then(json);
+      function news_item(cachedItems, id) {
+        for (let item of cachedItems) {
+          if (item.id === id) {
+            return item;
+          }
+        }
+        return fetch(`${HACKER_NEWS_API}/item/${id}.json`).then(status).then(json);
       }
 
       refreshHackerNews();
 
-      setInterval(refreshHackerNews, 60_000);
+      setInterval(refreshHackerNews, 10_000);
     </script>
   </body>
 </html>
