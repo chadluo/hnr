@@ -58,6 +58,17 @@
         grid-row: span 2;
         font-size: 2.5rem;
       }
+      @media screen and (max-width: 960px) {
+        #news {
+          row-gap: 0.5rem;
+        }
+        #news div,
+        #news div:nth-child(-n + 3),
+        #news div:nth-child(1) {
+          grid-column: span 12;
+          font-size: 1rem;
+        }
+      }
     </style>
   </head>
   <body>
