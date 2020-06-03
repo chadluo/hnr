@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hacker News</title>
+    <style>
+      body {
+        font-size: 20px;
+      }
+      main {
+        width: 1024px;
+        margin: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Hacker News</h1>
+      <div id="news">loading...</div>
+    </main>
+    <script>
+      "use strict";
+      const HACKER_NEWS_API = "https://hacker-news.firebaseio.com/v0";
+      const HACKER_NEWS_ITEM = `https://news.ycombinator.com/item?id=`;
+
+      function render(items) {
+        document.getElementById("news").innerHTML = items
+          .map((i) => `<div><a href="${i.url}">${i.title}</a></div>`)
+          .join("");
+      }
+
+      async function refreshHackerNews() {
+        fetch(
+          `${HACKER_NEWS_API}/topstories.json?limitToFirst=30&orderBy="$priority"`
+        )
+          .then(status)
+          .then(json)
+          .then((topStoryIds) => {
+            return Promise.all(topStoryIds.map(news_item));
+          })
+          .then(render);
+      }
+
+      function status(response) {
+        if (response.status >= 200 && response.status < 300) {
+          return Promise.resolve(response);
+        } else {
+          return Promise.reject(new Error(response.statusText));
+        }
+      }
+
+      function json(response) {
+        return response.json();
+      }
+
+      function news_item(id) {
+        return fetch(`${HACKER_NEWS_API}/item/${id}.json`)
+          .then(status)
+          .then(json);
+      }
+
+      refreshHackerNews();
+
+      setInterval(refreshHackerNews, 60_000);
+    </script>
+  </body>
+</html>
