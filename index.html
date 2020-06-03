@@ -4,13 +4,56 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hacker News</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400&family=Cinzel&display=swap"
+      rel="stylesheet"
+    />
+
     <style>
-      body {
+      :root {
         font-size: 20px;
       }
+      body {
+        font: 1rem/1 "Assistant", sans-serif;
+      }
+      a {
+        text-decoration: none;
+        color: black;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      a:visited {
+        color: #999;
+      }
+      h1 {
+        text-align: center;
+        font-family: "Cinzel", serif;
+        font-size: 4rem;
+        font-weight: 400;
+      }
       main {
-        width: 1024px;
+        width: 60rem;
         margin: auto;
+        padding: 10px;
+      }
+      #news {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        column-gap: 1.5rem;
+        row-gap: 1rem;
+      }
+      #news div:nth-child(-n + 5) {
+        font-size: 1.5rem;
+        font-weight: 300;
+        grid-column: span 2;
+        margin: 0.5rem 0;
+      }
+      #news div:nth-child(1) {
+        font-size: 2.5rem;
+        font-weight: 300;
+        grid-column: span 4;
+        margin: 1rem 0;
       }
     </style>
   </head>
@@ -26,19 +69,11 @@
       const CACHED_ITEMS_KEY = "cachedItems";
       const CACHE_UPDATE_TIME_KEY = "cacheUpdated";
 
-      function render(items) {
-        document.getElementById("news").innerHTML = items
-          .map((i) => `<div><a href="${i.url}">${i.title}</a></div>`)
-          .join("");
-      }
-
-      function store(items) {
-        localStorage.setItem(CACHED_ITEMS_KEY, JSON.stringify(items));
-        localStorage.setItem(CACHE_UPDATE_TIME_KEY, new Date());
-      }
+      let params = new URLSearchParams(window.location.search);
+      const COUNT = params.get("count") || 1 + 4 + 12;
 
       function refreshHackerNews() {
-        fetch(`${HACKER_NEWS_API}/topstories.json?limitToFirst=30&orderBy="$priority"`)
+        fetch(`${HACKER_NEWS_API}/topstories.json?limitToFirst=${COUNT}&orderBy="$priority"`)
           .then(status)
           .then(json)
           .then((topStoryIds) => {
@@ -49,6 +84,26 @@
             render(items);
             store(items);
           });
+      }
+
+      function render(items) {
+        document.getElementById("news").innerHTML = items
+          .map((i) => `<div><a href="${i.url || HACKER_NEWS_ITEM + i.id}">${i.title}</a></div>`)
+          .join("");
+      }
+
+      function store(items) {
+        localStorage.setItem(CACHED_ITEMS_KEY, JSON.stringify(items));
+        localStorage.setItem(CACHE_UPDATE_TIME_KEY, new Date());
+      }
+
+      function news_item(cachedItems, id) {
+        for (let item of cachedItems) {
+          if (item.id === id) {
+            return item;
+          }
+        }
+        return fetch(`${HACKER_NEWS_API}/item/${id}.json`).then(status).then(json);
       }
 
       function status(response) {
@@ -63,18 +118,9 @@
         return response.json();
       }
 
-      function news_item(cachedItems, id) {
-        for (let item of cachedItems) {
-          if (item.id === id) {
-            return item;
-          }
-        }
-        return fetch(`${HACKER_NEWS_API}/item/${id}.json`).then(status).then(json);
-      }
-
       refreshHackerNews();
 
-      setInterval(refreshHackerNews, 10_000);
+      setInterval(refreshHackerNews, 60_000);
     </script>
   </body>
 </html>
