@@ -19,12 +19,13 @@
       a {
         text-decoration: none;
         color: black;
-      }
-      a:hover {
-        text-decoration: underline;
+        transition: 0.2s;
       }
       a:visited {
-        color: #999;
+        color: #666;
+      }
+      a:hover {
+        color: #f60;
       }
       h1 {
         text-align: center;
@@ -33,27 +34,29 @@
         font-weight: 400;
       }
       main {
-        width: 60rem;
+        width: 85%;
+        max-width: 60rem;
         margin: auto;
         padding: 10px;
       }
       #news {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        column-gap: 1.5rem;
-        row-gap: 1rem;
+        grid-template-columns: repeat(12, 1fr);
+        column-gap: 0.5rem;
+        row-gap: 1.5rem;
       }
-      #news div:nth-child(-n + 5) {
+      #news div {
+        grid-column: span 3;
+      }
+      #news div:nth-child(-n + 3) {
+        grid-column: span 4;
         font-size: 1.5rem;
         font-weight: 300;
-        grid-column: span 2;
-        margin: 0.5rem 0;
       }
       #news div:nth-child(1) {
+        grid-column: span 8;
+        grid-row: span 2;
         font-size: 2.5rem;
-        font-weight: 300;
-        grid-column: span 4;
-        margin: 1rem 0;
       }
     </style>
   </head>
@@ -70,7 +73,7 @@
       const CACHE_UPDATE_TIME_KEY = "cacheUpdated";
 
       let params = new URLSearchParams(window.location.search);
-      const COUNT = params.get("count") || 1 + 4 + 12;
+      const COUNT = params.get("count") || 1 + 2 + 12;
 
       function refreshHackerNews() {
         fetch(`${HACKER_NEWS_API}/topstories.json?limitToFirst=${COUNT}&orderBy="$priority"`)
