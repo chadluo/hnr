@@ -5,16 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hacker News</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400&family=Cinzel&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cinzel&family=Open+Sans:ital@0;1&display=swap"
       rel="stylesheet"
     />
 
     <style>
       :root {
-        font-size: 20px;
+        font-size: 16px;
       }
       body {
-        font: 1rem/1 "Assistant", sans-serif;
+        font: 1rem/1.25 "Open Sans", sans-serif;
       }
       a {
         text-decoration: none;
@@ -39,23 +39,36 @@
         margin: auto;
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        column-gap: 0.5rem;
-        row-gap: 1.5rem;
+        column-gap: 2rem;
       }
-      #comments {
+      .contents {
         grid-column: span 2;
       }
       ul {
         margin: 0;
+        padding: 0;
       }
       li {
         list-style: none;
-      }
-      details details {
-        margin-left: 2rem;
+        margin: -2px -0.25em 0.5em;
+        padding: 2px 0.25em;
       }
       .highlight {
         background: #f60;
+        color: white;
+      }
+
+      details {
+        margin-bottom: 0.5em;
+      }
+      details[open] {
+        background: #ffffe0;
+      }
+      summary {
+        outline: none;
+      }
+      details details {
+        margin-left: 2rem;
       }
     </style>
   </head>
@@ -65,7 +78,10 @@
       <ul id="news">
         loading...
       </ul>
-      <div id="comments">comments</div>
+      <div class="contents">
+        <div id="comments">comments</div>
+        <p id="more"></p>
+      </div>
     </main>
     <script>
       "use strict";
@@ -76,7 +92,7 @@
       const COUNT = params.get("count") || 20;
 
       refreshHackerNews();
-      setInterval(refreshHackerNews, 10_000);
+      setInterval(refreshHackerNews, 60_000);
 
       function refreshHackerNews() {
         fetch(`${HACKER_NEWS_API}/topstories.json?limitToFirst=${COUNT}&orderBy="$priority"`)
@@ -91,8 +107,9 @@
         news.innerText = "";
         let prevHighlight = parseInt(sessionStorage.getItem("highlight"));
         items.forEach((item) => {
+          let url = item.url || HACKER_NEWS_ITEM + item.id;
           let li = document.createElement("li");
-          li.innerText = item.title + " ";
+          li.innerText = item.title;
           if (item.id === prevHighlight) {
             li.classList.add("highlight");
           }
@@ -100,13 +117,21 @@
             news.childNodes.forEach((item) => item.classList.remove("highlight"));
             li.classList.add("highlight");
             renderComments(item.id, 10, 5);
+
+            let more = document.getElementById("more");
+            more.innerHTML = `<p>${item.url ? `<a href="${item.url}">Source</a> | ` : ""}<a href="${
+              HACKER_NEWS_ITEM + item.id
+            }">More comments</a>`;
+
             sessionStorage.setItem("highlight", item.id);
           });
-
-          let link = document.createElement("a");
-          link.innerText = "[via]";
-          link.href = item.url;
-          li.appendChild(link);
+          li.addEventListener("auxclick", (event) => {
+            // middle
+            if (event.which === 2) {
+              event.preventDefault();
+              window.open(url).focus();
+            }
+          });
 
           news.appendChild(li);
         });
@@ -115,10 +140,12 @@
       async function renderComments(rootId, width, depth) {
         let comments = document.getElementById("comments");
         comments.innerText = "";
-        let item = await requestItem(rootId);
 
+        let item = await requestItem(rootId);
         if (item.hasOwnProperty("kids")) {
-          item.kids.forEach((kidId) => renderComment(comments, kidId, width, depth - 1));
+          item.kids
+            .splice(0, Math.min(item.kids.length, width))
+            .forEach((kidId) => renderComment(comments, kidId, width, depth - 1));
         } else {
           comments.appendChild(document.createTextNode("No comments yet"));
         }
