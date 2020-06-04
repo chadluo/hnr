@@ -51,6 +51,9 @@
       li {
         list-style: none;
       }
+      details details {
+        margin-left: 2rem;
+      }
     </style>
   </head>
   <body>
@@ -59,17 +62,15 @@
       <ul id="news">
         loading...
       </ul>
-      <div id="comments">loading...</div>
+      <div id="comments">comments</div>
     </main>
     <script>
       "use strict";
       const HACKER_NEWS_API = "https://hacker-news.firebaseio.com/v0";
       const HACKER_NEWS_ITEM = `https://news.ycombinator.com/item?id=`;
-      const CACHED_ITEMS_KEY = "cachedItems";
-      const CACHE_UPDATE_TIME_KEY = "cacheUpdated";
 
       let params = new URLSearchParams(window.location.search);
-      const COUNT = params.get("count") || 1 + 2 + 12;
+      const COUNT = params.get("count") || 20;
 
       refreshHackerNews();
       setInterval(refreshHackerNews, 60_000);
@@ -78,64 +79,52 @@
         fetch(`${HACKER_NEWS_API}/topstories.json?limitToFirst=${COUNT}&orderBy="$priority"`)
           .then(status)
           .then(json)
-          .then((topStoryIds) => {
-            let cachedItems = JSON.parse(localStorage.getItem(CACHED_ITEMS_KEY) || "[]");
-            return Promise.all(topStoryIds.map((i) => news_item(cachedItems, i)));
-          })
-          .then((items) => {
-            renderItems(items);
-            store(items);
-          });
+          .then((topStoryIds) => Promise.all(topStoryIds.map(getItem)))
+          .then(renderItems);
       }
 
       function renderItems(items) {
         let news = document.getElementById("news");
         news.innerText = "";
-        items.forEach((i) => {
-          let item = document.createElement("li");
-          item.innerText = i.title + " ";
-          item.addEventListener("click", async (event) => {
-            /* event.preventDefault();
-            console.log(event.which);
-            switch (event.which) {
-              case 1: // 'left'
-                break;
-              case 2: // middle
-                console.log(i.url);
-                window.open(i.url).focus();
-                break;
-            } */
-            console.log("clicking " + event.target);
-            let commentNode = await buildCommentTree(i.id);
-            console.log(commentNode);
-            renderComments(commentNode);
+        items.forEach((item) => {
+          let li = document.createElement("li");
+          li.innerText = item.title + " ";
+          li.addEventListener("click", async (event) => {
+            document.getElementById("comments").innerText = "loading...";
+            renderComments(await buildCommentTree(item.id, 10, 5));
           });
 
           let link = document.createElement("a");
           link.innerText = "[via]";
-          link.href = i.url;
-          item.appendChild(link);
+          link.href = item.url;
+          li.appendChild(link);
 
-          news.appendChild(item);
+          news.appendChild(li);
         });
       }
 
-      async function buildCommentTree(id) {
+      ///
+
+      async function buildCommentTree(id, width, depth) {
         let item = await requestItem(id);
-        console.log(id, item);
-        if (item.kids !== null && item.kids !== undefined) {
-          for (let i = 0; i < item.kids.length; i++) {
-            item.kids[i] = await buildCommentTree(item.kids[i]);
-          }
+        if (depth <= 0 || !item.hasOwnProperty("kids")) {
+          return item;
         }
+
+        let populatedKids = await Promise.all(
+          item.kids
+            .splice(0, Math.min(item.kids.length, width))
+            .map((kidId) => buildCommentTree(kidId, width, depth - 1))
+        );
+        item.kids = populatedKids;
         return item;
       }
 
-      function renderComments(commentNode) {
+      async function renderComments(root) {
         let comments = document.getElementById("comments");
-        comments.innerText = "";
-        if (commentNode.hasOwnProperty("kids")) {
-          commentNode.kids.forEach((comment) => comments.appendChild(renderComment(comment)));
+        comments.innerHTML = `${root.title}`;
+        if (root.hasOwnProperty("kids")) {
+          root.kids.forEach((comment) => comments.appendChild(renderComment(comment)));
         }
       }
 
@@ -150,22 +139,17 @@
         return details;
       }
 
-      function requestItem(id) {
-        return fetch(`${HACKER_NEWS_API}/item/${id}.json`).then(status).then(json);
+      ///
+
+      async function getItem(id) {
+        let cached = localStorage.getItem(id);
+        return cached !== null ? JSON.parse(cached) : await requestItem(id);
       }
 
-      function store(items) {
-        localStorage.setItem(CACHED_ITEMS_KEY, JSON.stringify(items));
-        localStorage.setItem(CACHE_UPDATE_TIME_KEY, new Date());
-      }
-
-      function news_item(cachedItems, id) {
-        for (let item of cachedItems) {
-          if (item.id === id) {
-            return item;
-          }
-        }
-        return fetch(`${HACKER_NEWS_API}/item/${id}.json`).then(status).then(json);
+      async function requestItem(id) {
+        let requested = await fetch(`${HACKER_NEWS_API}/item/${id}.json`).then(status).then(json);
+        localStorage.setItem(id, JSON.stringify(requested));
+        return requested;
       }
 
       function status(response) {
