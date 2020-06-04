@@ -54,6 +54,9 @@
       details details {
         margin-left: 2rem;
       }
+      .highlight {
+        background: #f60;
+      }
     </style>
   </head>
   <body>
@@ -73,7 +76,7 @@
       const COUNT = params.get("count") || 20;
 
       refreshHackerNews();
-      setInterval(refreshHackerNews, 60_000);
+      setInterval(refreshHackerNews, 10_000);
 
       function refreshHackerNews() {
         fetch(`${HACKER_NEWS_API}/topstories.json?limitToFirst=${COUNT}&orderBy="$priority"`)
@@ -86,12 +89,18 @@
       function renderItems(items) {
         let news = document.getElementById("news");
         news.innerText = "";
+        let prevHighlight = parseInt(localStorage.getItem("highlight"));
         items.forEach((item) => {
           let li = document.createElement("li");
           li.innerText = item.title + " ";
+          if (item.id === prevHighlight) {
+            li.classList.add("highlight");
+          }
           li.addEventListener("click", async (event) => {
-            document.getElementById("comments").innerText = "loading...";
-            renderComments(await buildCommentTree(item.id, 10, 5));
+            news.childNodes.forEach((item) => item.classList.remove("highlight"));
+            li.classList.add("highlight");
+            renderComments(prevHighlight, item.id, 10, 5);
+            localStorage.setItem("highlight", item.id);
           });
 
           let link = document.createElement("a");
@@ -103,53 +112,52 @@
         });
       }
 
-      ///
-
-      async function buildCommentTree(id, width, depth) {
-        let item = await requestItem(id);
-        if (depth <= 0 || !item.hasOwnProperty("kids")) {
-          return item;
+      async function renderComments(prevHighlight, rootId, width, depth) {
+        if (prevHighlight === null) {
+          return;
         }
-
-        let populatedKids = await Promise.all(
-          item.kids
-            .splice(0, Math.min(item.kids.length, width))
-            .map((kidId) => buildCommentTree(kidId, width, depth - 1))
-        );
-        item.kids = populatedKids;
-        return item;
-      }
-
-      async function renderComments(root) {
         let comments = document.getElementById("comments");
-        comments.innerHTML = `${root.title}`;
-        if (root.hasOwnProperty("kids")) {
-          root.kids.forEach((comment) => comments.appendChild(renderComment(comment)));
+        comments.innerText = "";
+        let item = await requestItem(rootId);
+
+        if (item.hasOwnProperty("kids")) {
+          item.kids.forEach((kidId) => renderComment(comments, kidId, width, depth - 1));
         }
       }
 
-      function renderComment(commentNode) {
-        let details = document.createElement("details");
-        let summary = document.createElement("summary");
-        summary.innerHTML = commentNode.text;
-        details.prepend(summary);
-        if (commentNode.hasOwnProperty("kids")) {
-          commentNode.kids.forEach((comment) => details.appendChild(renderComment(comment)));
-        }
-        return details;
-      }
+      async function renderComment(parent, id, width, depth) {
+        let item = await requestItem(id);
 
-      ///
+        if (item.deleted) {
+          return;
+        }
+
+        let currentComment = document.createElement("details");
+        let commentText = document.createElement("summary");
+        commentText.innerHTML = `${item.text} [<a href="${HACKER_NEWS_ITEM + item.id}">${item.by}</a>]`;
+        currentComment.prepend(commentText);
+        parent.appendChild(currentComment);
+
+        if (depth >= 0 && item.hasOwnProperty("kids")) {
+          item.kids
+            .slice(0, Math.min(item.kids.length, width))
+            .forEach((kidId) => renderComment(currentComment, kidId, width, depth - 1));
+        }
+      }
 
       async function getItem(id) {
         let cached = localStorage.getItem(id);
-        return cached !== null ? JSON.parse(cached) : await requestItem(id);
+        if (cached !== null) {
+          return JSON.parse(cached);
+        } else {
+          let requested = await requestItem(id);
+          localStorage.setItem(id, JSON.stringify(requested));
+          return requested;
+        }
       }
 
-      async function requestItem(id) {
-        let requested = await fetch(`${HACKER_NEWS_API}/item/${id}.json`).then(status).then(json);
-        localStorage.setItem(id, JSON.stringify(requested));
-        return requested;
+      function requestItem(id) {
+        return fetch(`${HACKER_NEWS_API}/item/${id}.json`).then(status).then(json);
       }
 
       function status(response) {
