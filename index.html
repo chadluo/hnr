@@ -89,7 +89,7 @@
       function renderItems(items) {
         let news = document.getElementById("news");
         news.innerText = "";
-        let prevHighlight = parseInt(localStorage.getItem("highlight"));
+        let prevHighlight = parseInt(sessionStorage.getItem("highlight"));
         items.forEach((item) => {
           let li = document.createElement("li");
           li.innerText = item.title + " ";
@@ -99,8 +99,8 @@
           li.addEventListener("click", async (event) => {
             news.childNodes.forEach((item) => item.classList.remove("highlight"));
             li.classList.add("highlight");
-            renderComments(prevHighlight, item.id, 10, 5);
-            localStorage.setItem("highlight", item.id);
+            renderComments(item.id, 10, 5);
+            sessionStorage.setItem("highlight", item.id);
           });
 
           let link = document.createElement("a");
@@ -112,16 +112,15 @@
         });
       }
 
-      async function renderComments(prevHighlight, rootId, width, depth) {
-        if (prevHighlight === null) {
-          return;
-        }
+      async function renderComments(rootId, width, depth) {
         let comments = document.getElementById("comments");
         comments.innerText = "";
         let item = await requestItem(rootId);
 
         if (item.hasOwnProperty("kids")) {
           item.kids.forEach((kidId) => renderComment(comments, kidId, width, depth - 1));
+        } else {
+          comments.appendChild(document.createTextNode("No comments yet"));
         }
       }
 
@@ -146,12 +145,12 @@
       }
 
       async function getItem(id) {
-        let cached = localStorage.getItem(id);
+        let cached = sessionStorage.getItem(id);
         if (cached !== null) {
           return JSON.parse(cached);
         } else {
           let requested = await requestItem(id);
-          localStorage.setItem(id, JSON.stringify(requested));
+          sessionStorage.setItem(id, JSON.stringify(requested));
           return requested;
         }
       }
