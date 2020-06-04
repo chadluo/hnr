@@ -113,15 +113,15 @@
           if (item.id === prevHighlight) {
             li.classList.add("highlight");
           }
-          li.addEventListener("click", async (event) => {
+          li.addEventListener("click", (event) => {
             news.childNodes.forEach((item) => item.classList.remove("highlight"));
             li.classList.add("highlight");
             renderComments(item.id, 10, 5);
 
             let more = document.getElementById("more");
-            more.innerHTML = `<p>${item.url ? `<a href="${item.url}">Source</a> | ` : ""}<a href="${
+            more.innerHTML = `${item.url ? `[<a href="${item.url}">Source</a>] ` : ""}[<a href="${
               HACKER_NEWS_ITEM + item.id
-            }">More comments</a>`;
+            }">All comments</a>]`;
 
             sessionStorage.setItem("highlight", item.id);
           });
@@ -137,11 +137,11 @@
         });
       }
 
-      async function renderComments(rootId, width, depth) {
+      function renderComments(rootId, width, depth) {
         let comments = document.getElementById("comments");
         comments.innerText = "";
 
-        let item = await requestItem(rootId);
+        requestItem(rootId).then((item) => {
         if (item.hasOwnProperty("kids")) {
           item.kids
             .splice(0, Math.min(item.kids.length, width))
@@ -149,11 +149,11 @@
         } else {
           comments.appendChild(document.createTextNode("No comments yet"));
         }
+        });
       }
 
-      async function renderComment(parent, id, width, depth) {
-        let item = await requestItem(id);
-
+      function renderComment(parent, id, width, depth) {
+        requestItem(id).then((item) => {
         if (item.deleted) {
           return;
         }
@@ -169,6 +169,7 @@
             .slice(0, Math.min(item.kids.length, width))
             .forEach((kidId) => renderComment(currentComment, kidId, width, depth - 1));
         }
+        });
       }
 
       async function getItem(id) {
