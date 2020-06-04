@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hacker News</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Cinzel&family=Open+Sans:ital@0;1&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cinzel&family=Source+Sans+Pro:ital@0;1&display=swap"
       rel="stylesheet"
     />
 
@@ -14,11 +14,11 @@
         font-size: 16px;
       }
       body {
-        font: 1rem/1.25 "Open Sans", sans-serif;
+        font: 1rem/1.25 "Source Sans Pro", sans-serif;
       }
       a {
         text-decoration: none;
-        color: black;
+        color: #f60;
         transition: 0.2s;
       }
       a:visited {
@@ -45,7 +45,7 @@
         grid-column: span 2;
       }
       ul {
-        margin: 0;
+        margin: 2px 0 0;
         padding: 0;
       }
       li {
@@ -57,12 +57,17 @@
         background: #f60;
         color: white;
       }
+      #more {
+        margin-top: 0;
+      }
 
       details {
         margin-bottom: 0.5em;
+        padding-right: 1rem;
+        border-right: 2px solid white;
       }
       details[open] {
-        background: #ffffe0;
+        border-color: #f60;
       }
       summary {
         outline: none;
@@ -142,33 +147,33 @@
         comments.innerText = "";
 
         requestItem(rootId).then((item) => {
-        if (item.hasOwnProperty("kids")) {
-          item.kids
-            .splice(0, Math.min(item.kids.length, width))
-            .forEach((kidId) => renderComment(comments, kidId, width, depth - 1));
-        } else {
-          comments.appendChild(document.createTextNode("No comments yet"));
-        }
+          if (item.hasOwnProperty("kids")) {
+            item.kids
+              .splice(0, Math.min(item.kids.length, width))
+              .forEach((kidId) => renderComment(comments, kidId, width, depth - 1));
+          } else {
+            comments.appendChild(document.createTextNode("No comments yet"));
+          }
         });
       }
 
       function renderComment(parent, id, width, depth) {
         requestItem(id).then((item) => {
-        if (item.deleted) {
-          return;
-        }
+          if (item.deleted) {
+            return;
+          }
 
-        let currentComment = document.createElement("details");
-        let commentText = document.createElement("summary");
-        commentText.innerHTML = `${item.text} [<a href="${HACKER_NEWS_ITEM + item.id}">${item.by}</a>]`;
-        currentComment.prepend(commentText);
-        parent.appendChild(currentComment);
+          let currentComment = document.createElement("details");
+          let commentText = document.createElement("summary");
+          commentText.innerHTML = `${item.text} [<a href="${HACKER_NEWS_ITEM + item.id}">${item.by}</a>]`;
+          currentComment.prepend(commentText);
+          parent.appendChild(currentComment);
 
-        if (depth >= 0 && item.hasOwnProperty("kids")) {
-          item.kids
-            .slice(0, Math.min(item.kids.length, width))
-            .forEach((kidId) => renderComment(currentComment, kidId, width, depth - 1));
-        }
+          if (depth >= 0 && item.hasOwnProperty("kids")) {
+            item.kids
+              .slice(0, Math.min(item.kids.length, width))
+              .forEach((kidId) => renderComment(currentComment, kidId, width, depth - 1));
+          }
         });
       }
 
