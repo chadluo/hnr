@@ -69,6 +69,9 @@
       details details {
         margin-left: 2rem;
       }
+      details .more {
+        text-indent: 2rem;
+      }
       .hidden {
         display: none;
       }
@@ -139,13 +142,17 @@
         comments.innerHTML = "";
         requestItem(rootId).then((item) => {
           if (item.hasOwnProperty("kids")) {
-            let ellipsis = item.kids.length > COMMENT_TREE_WIDTH;
+            let moreComments = item.kids.length > COMMENT_TREE_WIDTH;
             stripKids(item).forEach((kidId, index) => renderComment(comments, kidId, 0, index, url));
-            if (ellipsis) {
-              let allCommentsLink = document.createElement("p");
-              allCommentsLink.innerHTML = `[<a href="${HACKER_NEWS_ITEM + rootId}">All comments</a>]`;
-              comments.appendChild(allCommentsLink);
+            if (moreComments) {
+              let more = document.createElement("p");
+              more.classList.add("more");
+              more.innerText = ELLIPSIS;
+              comments.append(more);
             }
+            let allCommentsLink = document.createElement("p");
+            allCommentsLink.innerHTML = `[<a href="${HACKER_NEWS_ITEM + rootId}">All comments</a>]`;
+            comments.appendChild(allCommentsLink);
           } else {
             comments.appendChild(document.createTextNode("No comments yet."));
             if (url) {
@@ -170,7 +177,14 @@
             parent.insertBefore(createNewsSourceLink(url), currentComment.nextSibling);
           }
           if (item.hasOwnProperty("kids")) {
+            let moreComments = item.kids.length > COMMENT_TREE_WIDTH;
             stripKids(item).forEach((kidId) => renderComment(currentComment, kidId, depth + 1));
+            if (moreComments) {
+              let more = document.createElement("p");
+              more.classList.add("more");
+              more.innerText = ELLIPSIS;
+              currentComment.append(more);
+            }
           }
         });
       }
