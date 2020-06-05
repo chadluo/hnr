@@ -8,13 +8,9 @@
       href="https://fonts.googleapis.com/css2?family=Cinzel&family=Source+Sans+Pro:ital@0;1&display=swap"
       rel="stylesheet"
     />
-
     <style>
-      :root {
-        font-size: 16px;
-      }
       body {
-        font: 1rem/1.25 "Source Sans Pro", sans-serif;
+        font-family: "Source Sans Pro", sans-serif;
       }
       a {
         text-decoration: none;
@@ -25,13 +21,13 @@
         color: #666;
       }
       a:hover {
-        color: #f60;
+        text-decoration: underline;
       }
       h1 {
         text-align: center;
-        font-family: "Cinzel", serif;
-        font-size: 4rem;
+        font: 4rem/1 "Cinzel", serif;
         font-weight: 400;
+        margin: 4rem 0;
       }
       main {
         width: calc(100% - 2rem);
@@ -52,13 +48,11 @@
         list-style: none;
         margin: -2px -0.25em 0.5em;
         padding: 2px 0.25em;
+        cursor: pointer;
       }
       .highlight {
         background: #f60;
         color: white;
-      }
-      #more {
-        margin-top: 0;
       }
 
       details {
@@ -85,13 +79,14 @@
       </ul>
       <div class="contents">
         <div id="comments">comments</div>
-        <p id="more"></p>
       </div>
     </main>
     <script>
       "use strict";
       const HACKER_NEWS_API = "https://hacker-news.firebaseio.com/v0";
       const HACKER_NEWS_ITEM = `https://news.ycombinator.com/item?id=`;
+      const COMMENT_TREE_WIDTH = 10;
+      const COMMENT_TREE_DEPTH = 5;
 
       let params = new URLSearchParams(window.location.search);
       const COUNT = params.get("count") || 20;
@@ -121,14 +116,11 @@
           li.addEventListener("click", (event) => {
             news.childNodes.forEach((item) => item.classList.remove("highlight"));
             li.classList.add("highlight");
-            renderComments(item.id, 10, 5);
-
-            let more = document.getElementById("more");
-            more.innerHTML = `${item.url ? `[<a href="${item.url}">Source</a>] ` : ""}[<a href="${
+            let sourceLinkHTML = `${item.url ? `[<a href="${item.url}">Source</a>] ` : ""}[<a href="${
               HACKER_NEWS_ITEM + item.id
             }">All comments</a>]`;
-
             sessionStorage.setItem("highlight", item.id);
+            renderComments(item.id, sourceLinkHTML);
           });
           li.addEventListener("auxclick", (event) => {
             // middle
@@ -137,38 +129,39 @@
               window.open(url).focus();
             }
           });
-
           news.appendChild(li);
         });
       }
 
-      function renderComments(rootId, width, depth) {
+      function renderComments(rootId, sourceLinkHTML) {
         let comments = document.getElementById("comments");
-        comments.innerText = "";
-
+        comments.innerHTML = "";
         requestItem(rootId).then((item) => {
           if (item.hasOwnProperty("kids")) {
             item.kids
-              .splice(0, Math.min(item.kids.length, width))
-              .forEach((kidId) => renderComment(comments, kidId, width, depth - 1));
+              .splice(0, Math.min(item.kids.length, COMMENT_TREE_WIDTH))
+              .forEach((kidId, index) =>
+                renderComment(comments, kidId, index, COMMENT_TREE_WIDTH, COMMENT_TREE_DEPTH, sourceLinkHTML)
+              );
           } else {
-            comments.appendChild(document.createTextNode("No comments yet"));
+            comments.appendChild(document.createTextNode("No comments yet."));
           }
         });
       }
 
-      function renderComment(parent, id, width, depth) {
+      function renderComment(parent, id, index, width, depth, sourceLinkHTML) {
         requestItem(id).then((item) => {
-          if (item.deleted) {
-            return;
-          }
-
+          if (item.deleted) return;
           let currentComment = document.createElement("details");
           let commentText = document.createElement("summary");
           commentText.innerHTML = `${item.text} [<a href="${HACKER_NEWS_ITEM + item.id}">${item.by}</a>]`;
           currentComment.prepend(commentText);
           parent.appendChild(currentComment);
-
+          if (depth === COMMENT_TREE_DEPTH && index === 0) {
+            let sourceLink = document.createElement("p");
+            sourceLink.innerHTML = sourceLinkHTML;
+            parent.appendChild(sourceLink);
+          }
           if (depth >= 0 && item.hasOwnProperty("kids")) {
             item.kids
               .slice(0, Math.min(item.kids.length, width))
