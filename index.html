@@ -69,13 +69,16 @@
       details details {
         margin-left: 2rem;
       }
+      .hidden {
+        display: none;
+      }
     </style>
   </head>
   <body>
     <h1>Hacker News</h1>
     <main>
       <ul id="news">
-        loading...
+        loading…
       </ul>
       <div class="contents">
         <div id="comments">comments</div>
@@ -87,6 +90,7 @@
       const HACKER_NEWS_ITEM = `https://news.ycombinator.com/item?id=`;
       const COMMENT_TREE_WIDTH = 10;
       const COMMENT_TREE_DEPTH = 5;
+      const ELLIPSIS = "…";
 
       let params = new URLSearchParams(window.location.search);
       const COUNT = params.get("count") || 20;
@@ -116,12 +120,8 @@
           li.addEventListener("click", (event) => {
             news.childNodes.forEach((item) => item.classList.remove("highlight"));
             li.classList.add("highlight");
-            let sourceLink = document.createElement("p");
-            sourceLink.innerHTML = `${item.url ? `[<a href="${item.url}">Source</a>] ` : ""}[<a href="${
-              HACKER_NEWS_ITEM + item.id
-            }">All comments</a>]`;
             sessionStorage.setItem("highlight", item.id);
-            renderComments(item.id, sourceLink);
+            renderComments(item.id, item.url);
           });
           li.addEventListener("auxclick", (event) => {
             // middle
@@ -134,36 +134,55 @@
         });
       }
 
-      function renderComments(rootId, sourceLink) {
+      function renderComments(rootId, url) {
         let comments = document.getElementById("comments");
         comments.innerHTML = "";
         requestItem(rootId).then((item) => {
           if (item.hasOwnProperty("kids")) {
-            item.kids
-              .splice(0, Math.min(item.kids.length, COMMENT_TREE_WIDTH))
-              .forEach((kidId, index) => renderComment(comments, kidId, index, COMMENT_TREE_DEPTH, sourceLink));
+            let ellipsis = item.kids.length > COMMENT_TREE_WIDTH;
+            stripKids(item).forEach((kidId, index) => renderComment(comments, kidId, index, COMMENT_TREE_DEPTH, url));
+            if (ellipsis) {
+              let allCommentsLink = document.createElement("p");
+              allCommentsLink.innerHTML = `[<a href="${HACKER_NEWS_ITEM + rootId}">All comments</a>]`;
+              comments.appendChild(allCommentsLink);
+            }
           } else {
             comments.appendChild(document.createTextNode("No comments yet."));
-            comments.appendChild(sourceLink);
+            if (url) {
+              comments.appendChild(createNewsSourceLink(url));
+            }
           }
         });
       }
 
-      function renderComment(parent, id, index, depth, sourceLink) {
+      function renderComment(parent, id, index, depth, url) {
+        if (depth <= 0) return;
+        let currentComment = document.createElement("details");
+        if (depth === COMMENT_TREE_DEPTH) currentComment.classList.add("hidden");
+        parent.appendChild(currentComment);
         requestItem(id).then((item) => {
           if (item.deleted) return;
-          let currentComment = document.createElement("details");
           let commentText = document.createElement("summary");
           commentText.innerHTML = `${item.text} [<a href="${HACKER_NEWS_ITEM + item.id}">${item.by}</a>]`;
           currentComment.prepend(commentText);
-          parent.appendChild(currentComment);
-          if (depth === COMMENT_TREE_DEPTH && index === 0) parent.appendChild(sourceLink);
-          if (depth >= 0 && item.hasOwnProperty("kids")) {
-            item.kids
-              .slice(0, Math.min(item.kids.length, COMMENT_TREE_WIDTH))
-              .forEach((kidId) => renderComment(currentComment, kidId, width, depth - 1));
+          currentComment.classList.remove("hidden");
+          if (depth === COMMENT_TREE_DEPTH && index === 0 && url) {
+            parent.insertBefore(createNewsSourceLink(url), currentComment.nextSibling);
+          }
+          if (item.hasOwnProperty("kids")) {
+            stripKids(item).forEach((kidId) => renderComment(currentComment, kidId, depth - 1, url));
           }
         });
+      }
+
+      function stripKids(item) {
+        return item.kids.slice(0, Math.min(item.kids.length, COMMENT_TREE_WIDTH));
+      }
+
+      function createNewsSourceLink(url) {
+        let sourceLink = document.createElement("p");
+        sourceLink.innerHTML = `[<a href="${url}">Source</a>]`;
+        return sourceLink;
       }
 
       async function getItem(id) {
