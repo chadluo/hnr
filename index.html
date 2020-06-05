@@ -116,11 +116,12 @@
           li.addEventListener("click", (event) => {
             news.childNodes.forEach((item) => item.classList.remove("highlight"));
             li.classList.add("highlight");
-            let sourceLinkHTML = `${item.url ? `[<a href="${item.url}">Source</a>] ` : ""}[<a href="${
+            let sourceLink = document.createElement("p");
+            sourceLink.innerHTML = `${item.url ? `[<a href="${item.url}">Source</a>] ` : ""}[<a href="${
               HACKER_NEWS_ITEM + item.id
             }">All comments</a>]`;
             sessionStorage.setItem("highlight", item.id);
-            renderComments(item.id, sourceLinkHTML);
+            renderComments(item.id, sourceLink);
           });
           li.addEventListener("auxclick", (event) => {
             // middle
@@ -133,23 +134,22 @@
         });
       }
 
-      function renderComments(rootId, sourceLinkHTML) {
+      function renderComments(rootId, sourceLink) {
         let comments = document.getElementById("comments");
         comments.innerHTML = "";
         requestItem(rootId).then((item) => {
           if (item.hasOwnProperty("kids")) {
             item.kids
               .splice(0, Math.min(item.kids.length, COMMENT_TREE_WIDTH))
-              .forEach((kidId, index) =>
-                renderComment(comments, kidId, index, COMMENT_TREE_WIDTH, COMMENT_TREE_DEPTH, sourceLinkHTML)
-              );
+              .forEach((kidId, index) => renderComment(comments, kidId, index, COMMENT_TREE_DEPTH, sourceLink));
           } else {
             comments.appendChild(document.createTextNode("No comments yet."));
+            comments.appendChild(sourceLink);
           }
         });
       }
 
-      function renderComment(parent, id, index, width, depth, sourceLinkHTML) {
+      function renderComment(parent, id, index, depth, sourceLink) {
         requestItem(id).then((item) => {
           if (item.deleted) return;
           let currentComment = document.createElement("details");
@@ -157,14 +157,10 @@
           commentText.innerHTML = `${item.text} [<a href="${HACKER_NEWS_ITEM + item.id}">${item.by}</a>]`;
           currentComment.prepend(commentText);
           parent.appendChild(currentComment);
-          if (depth === COMMENT_TREE_DEPTH && index === 0) {
-            let sourceLink = document.createElement("p");
-            sourceLink.innerHTML = sourceLinkHTML;
-            parent.appendChild(sourceLink);
-          }
+          if (depth === COMMENT_TREE_DEPTH && index === 0) parent.appendChild(sourceLink);
           if (depth >= 0 && item.hasOwnProperty("kids")) {
             item.kids
-              .slice(0, Math.min(item.kids.length, width))
+              .slice(0, Math.min(item.kids.length, COMMENT_TREE_WIDTH))
               .forEach((kidId) => renderComment(currentComment, kidId, width, depth - 1));
           }
         });
