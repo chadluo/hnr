@@ -144,20 +144,13 @@
           if (item.hasOwnProperty("kids")) {
             let moreComments = item.kids.length > COMMENT_TREE_WIDTH;
             stripKids(item).forEach((kidId, index) => renderComment(comments, kidId, 0, index, url));
-            if (moreComments) {
-              let more = document.createElement("p");
-              more.classList.add("more");
-              more.innerText = ELLIPSIS;
-              comments.append(more);
-            }
+            if (moreComments) comments.append(createEllipsis());
             let allCommentsLink = document.createElement("p");
             allCommentsLink.innerHTML = `[<a href="${HACKER_NEWS_ITEM + rootId}">All comments</a>]`;
             comments.appendChild(allCommentsLink);
           } else {
             comments.appendChild(document.createTextNode("No comments yet."));
-            if (url) {
-              comments.appendChild(createNewsSourceLink(url));
-            }
+            if (url) comments.appendChild(createNewsSourceLink(url));
           }
         });
       }
@@ -179,12 +172,7 @@
           if (item.hasOwnProperty("kids")) {
             let moreComments = item.kids.length > COMMENT_TREE_WIDTH;
             stripKids(item).forEach((kidId) => renderComment(currentComment, kidId, depth + 1));
-            if (moreComments) {
-              let more = document.createElement("p");
-              more.classList.add("more");
-              more.innerText = ELLIPSIS;
-              currentComment.append(more);
-            }
+            if (moreComments) currentComment.append(createEllipsis());
           }
         });
       }
@@ -197,6 +185,13 @@
         let sourceLink = document.createElement("p");
         sourceLink.innerHTML = `[<a href="${url}">Source</a>]`;
         return sourceLink;
+      }
+
+      function createEllipsis() {
+        let more = document.createElement("p");
+        more.classList.add("more");
+        more.innerText = ELLIPSIS;
+        return more;
       }
 
       async function getItem(id) {
