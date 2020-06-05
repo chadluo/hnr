@@ -140,7 +140,7 @@
         requestItem(rootId).then((item) => {
           if (item.hasOwnProperty("kids")) {
             let ellipsis = item.kids.length > COMMENT_TREE_WIDTH;
-            stripKids(item).forEach((kidId, index) => renderComment(comments, kidId, index, COMMENT_TREE_DEPTH, url));
+            stripKids(item).forEach((kidId, index) => renderComment(comments, kidId, 0, index, url));
             if (ellipsis) {
               let allCommentsLink = document.createElement("p");
               allCommentsLink.innerHTML = `[<a href="${HACKER_NEWS_ITEM + rootId}">All comments</a>]`;
@@ -155,22 +155,22 @@
         });
       }
 
-      function renderComment(parent, id, index, depth, url) {
-        if (depth <= 0) return;
+      function renderComment(parent, id, depth, index, url) {
+        if (depth >= COMMENT_TREE_DEPTH) return;
         let currentComment = document.createElement("details");
-        if (depth === COMMENT_TREE_DEPTH) currentComment.classList.add("hidden");
+        if (depth === 0) currentComment.classList.add("hidden");
         parent.appendChild(currentComment);
         requestItem(id).then((item) => {
           if (item.deleted) return;
           let commentText = document.createElement("summary");
-          commentText.innerHTML = `${item.text} [<a href="${HACKER_NEWS_ITEM + item.id}">${item.by}</a>]`;
+          commentText.innerHTML = `${item.text} [<a href="${HACKER_NEWS_ITEM + id}">${item.by}</a>]`;
           currentComment.prepend(commentText);
           currentComment.classList.remove("hidden");
-          if (depth === COMMENT_TREE_DEPTH && index === 0 && url) {
+          if (depth === 0 && index === 0 && url) {
             parent.insertBefore(createNewsSourceLink(url), currentComment.nextSibling);
           }
           if (item.hasOwnProperty("kids")) {
-            stripKids(item).forEach((kidId) => renderComment(currentComment, kidId, depth - 1, url));
+            stripKids(item).forEach((kidId) => renderComment(currentComment, kidId, depth + 1));
           }
         });
       }
