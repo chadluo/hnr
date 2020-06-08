@@ -105,7 +105,11 @@
         fetch(`${HACKER_NEWS_API}/topstories.json?limitToFirst=${COUNT}&orderBy="$priority"`)
           .then(status)
           .then(json)
-          .then((topStoryIds) => Promise.all(topStoryIds.map(getItem)))
+          .then((topStoryIds) => {
+            let prevHighlight = parseInt(sessionStorage.getItem("highlight"));
+            if (!topStoryIds.includes(prevHighlight)) topStoryIds.push(prevHighlight);
+            return Promise.all(topStoryIds.map(getItem));
+          })
           .then(renderItems);
       }
 
@@ -114,44 +118,43 @@
         news.innerText = "";
         let prevHighlight = parseInt(sessionStorage.getItem("highlight"));
         items.forEach((item) => {
-          let url = item.url || HACKER_NEWS_ITEM + item.id;
-          let li = document.createElement("li");
-          li.innerText = item.title;
-          if (item.id === prevHighlight) {
-            li.classList.add("highlight");
-          }
-          li.addEventListener("click", (event) => {
+          let newsItem = document.createElement("li");
+          newsItem.innerText = item.title;
+          if (item.id === prevHighlight) newsItem.classList.add("highlight");
+          news.appendChild(newsItem);
+          newsItem.addEventListener("click", (event) => {
             news.childNodes.forEach((item) => item.classList.remove("highlight"));
-            li.classList.add("highlight");
+            newsItem.classList.add("highlight");
             sessionStorage.setItem("highlight", item.id);
-            renderComments(item.id, item.url);
+            renderComments(newsItem, item.id);
           });
-          li.addEventListener("auxclick", (event) => {
+          newsItem.addEventListener("auxclick", (event) => {
             // middle
             if (event.which === 2) {
               event.preventDefault();
-              window.open(url).focus();
+              window.open(item.url || HACKER_NEWS_ITEM + item.id).focus();
             }
           });
-          news.appendChild(li);
         });
       }
 
-      function renderComments(rootId, url) {
+      function renderComments(newsItem, rootId) {
         let comments = document.getElementById("comments");
         comments.innerHTML = "";
         requestItem(rootId).then((item) => {
           if (item.hasOwnProperty("kids")) {
             let moreComments = item.kids.length > COMMENT_TREE_WIDTH;
-            stripKids(item).forEach((kidId, index) => renderComment(comments, kidId, 0, index, url));
+            stripKids(item).forEach((kidId, index) => renderComment(comments, kidId, 0, index, item.url));
             if (moreComments) comments.append(createEllipsis());
             let allCommentsLink = document.createElement("p");
-            allCommentsLink.innerHTML = `[<a href="${HACKER_NEWS_ITEM + rootId}">All comments</a>]`;
+            allCommentsLink.innerHTML = `[<a href="${HACKER_NEWS_ITEM + rootId}">All ${item.descendants} comments</a>]`;
             comments.appendChild(allCommentsLink);
           } else {
             comments.appendChild(document.createTextNode("No comments yet."));
-            if (url) comments.appendChild(createNewsSourceLink(url));
+            if (item.url) comments.appendChild(createNewsSourceLink(item.url));
           }
+          newsItem.innerText = item.title;
+          sessionStorage.setItem(rootId, JSON.stringify(item));
         });
       }
 
