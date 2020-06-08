@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Hacker News</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Cinzel&family=Source+Sans+Pro:ital,wght@0,400;0,700;1,400&display=swap"
@@ -54,9 +54,12 @@
         background: #f60;
         color: white;
       }
-
+      #links {
+        margin-top: 0;
+        font-weight: bold;
+      }
       details {
-        margin-bottom: 0.5em;
+        margin-bottom: 1rem;
         padding-right: 1rem;
         border-right: 2px solid white;
       }
@@ -87,6 +90,7 @@
         loading…
       </ul>
       <div class="contents">
+        <p id="links">Hacker News</p>
         <div id="comments">comments</div>
       </div>
     </main>
@@ -95,7 +99,7 @@
       const HACKER_NEWS_API = "https://hacker-news.firebaseio.com/v0";
       const HACKER_NEWS_ITEM = `https://news.ycombinator.com/item?id=`;
       const COMMENT_TREE_WIDTH = 10;
-      const COMMENT_TREE_DEPTH = 5;
+      const COMMENT_TREE_DEPTH = 3;
       const ELLIPSIS = "…";
       const HIGHLIGHT = "highlight";
 
@@ -111,93 +115,84 @@
           .then(json)
           .then((topStoryIds) => {
             let prevHighlight = parseInt(sessionStorage.getItem(HIGHLIGHT));
-            if (!topStoryIds.includes(prevHighlight)) topStoryIds.push(prevHighlight);
+            if (prevHighlight && !topStoryIds.includes(prevHighlight)) topStoryIds.push(prevHighlight);
             return Promise.all(topStoryIds.map(getItem));
           })
           .then((cachedItems) => {
             let news = document.getElementById("news");
             news.innerText = "";
-            cachedItems.forEach(renderNewsItem);
+            cachedItems.forEach((cachedItem) => renderNewsItem(news, cachedItem));
           });
       }
 
-      function renderNewsItem(cachedItem) {
-        let newsItem = document.createElement("li");
-        newsItem.innerText = cachedItem.title;
-        if (cachedItem.id === parseInt(sessionStorage.getItem(HIGHLIGHT))) newsItem.classList.add(HIGHLIGHT);
-        news.appendChild(newsItem);
-        newsItem.addEventListener("click", (event) => {
+      function renderNewsItem(news, cachedItem) {
+        let li = document.createElement("li");
+        li.innerText = cachedItem.title;
+        if (cachedItem.id === parseInt(sessionStorage.getItem(HIGHLIGHT))) li.classList.add(HIGHLIGHT);
+        news.appendChild(li);
+        li.addEventListener("click", (event) => {
           news.childNodes.forEach((item) => item.classList.remove(HIGHLIGHT));
-          newsItem.classList.add(HIGHLIGHT);
+          li.classList.add(HIGHLIGHT);
           sessionStorage.setItem(HIGHLIGHT, cachedItem.id);
+          renderLinks(cachedItem);
           let comments = document.getElementById("comments");
           comments.innerHTML = "";
           requestItem(cachedItem.id).then((item) => {
+            renderLinks(item);
+            cacheItem(item);
             if (item.hasOwnProperty("kids")) {
-              let moreComments = item.kids.length > COMMENT_TREE_WIDTH;
-              stripKids(item).forEach((kidId, index) => renderComment(comments, kidId, 0, item.by, index, item.url));
-              if (moreComments) comments.append(createEllipsis());
-              let allCommentsLink = document.createElement("p");
-              allCommentsLink.innerHTML = `[<a href="${HACKER_NEWS_ITEM + item.id}">All ${
-                item.descendants
-              } comments</a>]`;
-              comments.appendChild(allCommentsLink);
+              for (let i = 0; i < Math.min(item.kids.length, COMMENT_TREE_WIDTH + 1); i++) {
+                let d = document.createElement("details");
+                d.id = item.kids[i];
+                comments.appendChild(d);
+                renderComment(d, item.kids[i], 0, i, item.by);
+              }
             } else {
               comments.appendChild(document.createTextNode("No comments yet."));
-              if (item.url) comments.appendChild(createNewsSourceLink(item.url));
             }
-            newsItem.innerText = item.title;
-            cacheItem(item);
+            li.innerText = item.title;
           });
         });
-        newsItem.addEventListener("auxclick", (event) => {
+        li.addEventListener("auxclick", (event) => {
           // middle
           if (event.which === 2) {
             event.preventDefault();
-            window.open(item.url || HACKER_NEWS_ITEM + item.id).focus();
+            window.open(cachedItem.url || HACKER_NEWS_ITEM + cachedItem.id).focus();
           }
         });
       }
 
-      function renderComment(parent, id, depth, by, index, url) {
-        if (depth >= COMMENT_TREE_DEPTH) return;
-        let currentComment = document.createElement("details");
+      function renderLinks(item) {
+        let links = document.getElementById("links");
+        links.innerHTML = `<a href="${item.url || HACKER_NEWS_ITEM + item.id}">${item.title}</a>${
+          item.descendants && item.descendants > 0
+            ? ` (<a href="${HACKER_NEWS_ITEM + item.id}">${item.descendants} comments</a>)`
+            : ""
+        }`;
+      }
+
+      function renderComment(currentComment, id, depth, index, by) {
+        let commentText = document.createElement("summary");
+        currentComment.prepend(commentText);
+        if (depth >= COMMENT_TREE_DEPTH || index >= COMMENT_TREE_WIDTH) {
+          commentText.innerText = ELLIPSIS;
+          return;
+        }
         if (depth === 0) currentComment.classList.add("hidden");
-        parent.appendChild(currentComment);
         requestItem(id).then((item) => {
-          if (item.deleted) return;
-          let commentText = document.createElement("summary");
-          commentText.innerHTML = `${item.text} [<a class="${by === item.by ? "op" : ""}" href="${
-            HACKER_NEWS_ITEM + id
-          }">${item.by}</a>]`;
-          currentComment.prepend(commentText);
+          commentText.innerHTML = item.deleted
+            ? "[deleted]"
+            : `${item.text} [<a class="${by === item.by ? "op" : ""}" href="${HACKER_NEWS_ITEM + id}">${item.by}</a>]`;
           currentComment.classList.remove("hidden");
-          if (depth === 0 && index === 0 && url) {
-            parent.insertBefore(createNewsSourceLink(url), currentComment.nextSibling);
-          }
           if (item.hasOwnProperty("kids")) {
-            let moreComments = item.kids.length > COMMENT_TREE_WIDTH;
-            stripKids(item).forEach((kidId) => renderComment(currentComment, kidId, depth + 1));
-            if (moreComments) currentComment.append(createEllipsis());
+            for (let i = 0; i < Math.min(item.kids.length, COMMENT_TREE_WIDTH + 1); i++) {
+              let d = document.createElement("details");
+              d.id = item.kids[i];
+              currentComment.appendChild(d);
+              renderComment(d, item.kids[i], depth + 1, i, item.by);
+            }
           }
         });
-      }
-
-      function stripKids(item) {
-        return item.kids.slice(0, Math.min(item.kids.length, COMMENT_TREE_WIDTH));
-      }
-
-      function createNewsSourceLink(url) {
-        let sourceLink = document.createElement("p");
-        sourceLink.innerHTML = `[<a href="${url}">Source</a>]`;
-        return sourceLink;
-      }
-
-      function createEllipsis() {
-        let more = document.createElement("p");
-        more.classList.add("more");
-        more.innerText = ELLIPSIS;
-        return more;
       }
 
       async function getItem(id) {
@@ -216,7 +211,9 @@
       }
 
       function cacheItem(item) {
-        sessionStorage.setItem(item.id, JSON.stringify(item));
+        if (item && item.id) {
+          sessionStorage.setItem(item.id, JSON.stringify(item));
+        }
       }
 
       function status(response) {
