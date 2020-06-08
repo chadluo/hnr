@@ -139,26 +139,18 @@
           comments.innerHTML = "";
           requestItem(cachedItem.id).then((item) => {
             renderLinks(item);
-            cacheItem(item);
+            li.innerText = item.title;
             if (item.hasOwnProperty("kids")) {
-              for (let i = 0; i < Math.min(item.kids.length, COMMENT_TREE_WIDTH + 1); i++) {
+              for (let i = 0; i < Math.min(item.kids.length, COMMENT_TREE_WIDTH); i++) {
                 let d = document.createElement("details");
-                d.id = item.kids[i];
                 comments.appendChild(d);
                 renderComment(d, item.kids[i], 0, i, item.by);
               }
             } else {
               comments.appendChild(document.createTextNode("No comments yet."));
             }
-            li.innerText = item.title;
+            cacheItem(item);
           });
-        });
-        li.addEventListener("auxclick", (event) => {
-          // middle
-          if (event.which === 2) {
-            event.preventDefault();
-            window.open(cachedItem.url || HACKER_NEWS_ITEM + cachedItem.id).focus();
-          }
         });
       }
 
@@ -187,13 +179,20 @@
           if (item.hasOwnProperty("kids")) {
             for (let i = 0; i < Math.min(item.kids.length, COMMENT_TREE_WIDTH + 1); i++) {
               let d = document.createElement("details");
-              d.id = item.kids[i];
               currentComment.appendChild(d);
               renderComment(d, item.kids[i], depth + 1, i, item.by);
             }
           }
         });
       }
+      /* currentComment.addEventListener("toggle", reload);
+          function reload(event) {
+            if (currentComment.open && currentComment.firstChild.innerText === ELLIPSIS) {
+              currentComment.removeChild(currentComment.firstChild);
+              renderComment(currentComment, id, 0, index - COMMENT_TREE_WIDTH, by);
+              currentComment.removeEventListener("toggle", reload);
+            }
+          } */
 
       async function getItem(id) {
         let cached = sessionStorage.getItem(id);
