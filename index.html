@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hacker News</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Cinzel&family=Source+Sans+Pro:ital@0;1&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cinzel&family=Source+Sans+Pro:ital,wght@0,400;0,700;1,400&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -72,6 +72,9 @@
       details .more {
         text-indent: 2rem;
       }
+      .op {
+        font-weight: bold;
+      }
       .hidden {
         display: none;
       }
@@ -94,6 +97,7 @@
       const COMMENT_TREE_WIDTH = 10;
       const COMMENT_TREE_DEPTH = 5;
       const ELLIPSIS = "…";
+      const HIGHLIGHT = "highlight";
 
       let params = new URLSearchParams(window.location.search);
       const COUNT = params.get("count") || 20;
@@ -106,59 +110,56 @@
           .then(status)
           .then(json)
           .then((topStoryIds) => {
-            let prevHighlight = parseInt(sessionStorage.getItem("highlight"));
+            let prevHighlight = parseInt(sessionStorage.getItem(HIGHLIGHT));
             if (!topStoryIds.includes(prevHighlight)) topStoryIds.push(prevHighlight);
             return Promise.all(topStoryIds.map(getItem));
           })
-          .then(renderItems);
+          .then((cachedItems) => {
+            let news = document.getElementById("news");
+            news.innerText = "";
+            cachedItems.forEach(renderNewsItem);
+          });
       }
 
-      function renderItems(items) {
-        let news = document.getElementById("news");
-        news.innerText = "";
-        let prevHighlight = parseInt(sessionStorage.getItem("highlight"));
-        items.forEach((item) => {
-          let newsItem = document.createElement("li");
-          newsItem.innerText = item.title;
-          if (item.id === prevHighlight) newsItem.classList.add("highlight");
-          news.appendChild(newsItem);
-          newsItem.addEventListener("click", (event) => {
-            news.childNodes.forEach((item) => item.classList.remove("highlight"));
-            newsItem.classList.add("highlight");
-            sessionStorage.setItem("highlight", item.id);
-            renderComments(newsItem, item.id);
-          });
-          newsItem.addEventListener("auxclick", (event) => {
-            // middle
-            if (event.which === 2) {
-              event.preventDefault();
-              window.open(item.url || HACKER_NEWS_ITEM + item.id).focus();
+      function renderNewsItem(cachedItem) {
+        let newsItem = document.createElement("li");
+        newsItem.innerText = cachedItem.title;
+        if (cachedItem.id === parseInt(sessionStorage.getItem(HIGHLIGHT))) newsItem.classList.add(HIGHLIGHT);
+        news.appendChild(newsItem);
+        newsItem.addEventListener("click", (event) => {
+          news.childNodes.forEach((item) => item.classList.remove(HIGHLIGHT));
+          newsItem.classList.add(HIGHLIGHT);
+          sessionStorage.setItem(HIGHLIGHT, cachedItem.id);
+          let comments = document.getElementById("comments");
+          comments.innerHTML = "";
+          requestItem(cachedItem.id).then((item) => {
+            if (item.hasOwnProperty("kids")) {
+              let moreComments = item.kids.length > COMMENT_TREE_WIDTH;
+              stripKids(item).forEach((kidId, index) => renderComment(comments, kidId, 0, item.by, index, item.url));
+              if (moreComments) comments.append(createEllipsis());
+              let allCommentsLink = document.createElement("p");
+              allCommentsLink.innerHTML = `[<a href="${HACKER_NEWS_ITEM + item.id}">All ${
+                item.descendants
+              } comments</a>]`;
+              comments.appendChild(allCommentsLink);
+            } else {
+              comments.appendChild(document.createTextNode("No comments yet."));
+              if (item.url) comments.appendChild(createNewsSourceLink(item.url));
             }
+            newsItem.innerText = item.title;
+            cacheItem(item);
           });
         });
-      }
-
-      function renderComments(newsItem, rootId) {
-        let comments = document.getElementById("comments");
-        comments.innerHTML = "";
-        requestItem(rootId).then((item) => {
-          if (item.hasOwnProperty("kids")) {
-            let moreComments = item.kids.length > COMMENT_TREE_WIDTH;
-            stripKids(item).forEach((kidId, index) => renderComment(comments, kidId, 0, index, item.url));
-            if (moreComments) comments.append(createEllipsis());
-            let allCommentsLink = document.createElement("p");
-            allCommentsLink.innerHTML = `[<a href="${HACKER_NEWS_ITEM + rootId}">All ${item.descendants} comments</a>]`;
-            comments.appendChild(allCommentsLink);
-          } else {
-            comments.appendChild(document.createTextNode("No comments yet."));
-            if (item.url) comments.appendChild(createNewsSourceLink(item.url));
+        newsItem.addEventListener("auxclick", (event) => {
+          // middle
+          if (event.which === 2) {
+            event.preventDefault();
+            window.open(item.url || HACKER_NEWS_ITEM + item.id).focus();
           }
-          newsItem.innerText = item.title;
-          sessionStorage.setItem(rootId, JSON.stringify(item));
         });
       }
 
-      function renderComment(parent, id, depth, index, url) {
+      function renderComment(parent, id, depth, by, index, url) {
         if (depth >= COMMENT_TREE_DEPTH) return;
         let currentComment = document.createElement("details");
         if (depth === 0) currentComment.classList.add("hidden");
@@ -166,7 +167,9 @@
         requestItem(id).then((item) => {
           if (item.deleted) return;
           let commentText = document.createElement("summary");
-          commentText.innerHTML = `${item.text} [<a href="${HACKER_NEWS_ITEM + id}">${item.by}</a>]`;
+          commentText.innerHTML = `${item.text} [<a class="${by === item.by ? "op" : ""}" href="${
+            HACKER_NEWS_ITEM + id
+          }">${item.by}</a>]`;
           currentComment.prepend(commentText);
           currentComment.classList.remove("hidden");
           if (depth === 0 && index === 0 && url) {
@@ -203,13 +206,17 @@
           return JSON.parse(cached);
         } else {
           let requested = await requestItem(id);
-          sessionStorage.setItem(id, JSON.stringify(requested));
+          cacheItem(requested);
           return requested;
         }
       }
 
       function requestItem(id) {
         return fetch(`${HACKER_NEWS_API}/item/${id}.json`).then(status).then(json);
+      }
+
+      function cacheItem(item) {
+        sessionStorage.setItem(item.id, JSON.stringify(item));
       }
 
       function status(response) {
