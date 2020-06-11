@@ -130,33 +130,33 @@
         li.innerText = cachedItem.title;
         if (cachedItem.id === parseInt(sessionStorage.getItem(HIGHLIGHT))) li.classList.add(HIGHLIGHT);
         news.appendChild(li);
-        li.addEventListener("click", (event) => {
+        li.addEventListener("click", () => {
           news.childNodes.forEach((item) => item.classList.remove(HIGHLIGHT));
           li.classList.add(HIGHLIGHT);
           sessionStorage.setItem(HIGHLIGHT, cachedItem.id);
           renderLinks(cachedItem);
           let comments = document.getElementById("comments");
           comments.innerHTML = "";
-          requestItem(cachedItem.id).then((item) => {
+          getItem(cachedItem.id).then((item) => {
             renderLinks(item);
             li.innerText = item.title;
-            if (item.hasOwnProperty("kids")) {
-              for (let i = 0; i < Math.min(item.kids.length, COMMENT_TREE_WIDTH); i++) {
-                let d = document.createElement("details");
-                comments.appendChild(d);
-                renderComment(d, item.kids[i], 0, i, item.by);
-              }
-            } else {
+            if (!item.hasOwnProperty("kids")) {
               comments.appendChild(document.createTextNode("No comments yet."));
+              return;
             }
-            cacheItem(item);
+            for (let i = 0; i < item.kids.length; i++) {
+              let d = document.createElement("details");
+              comments.appendChild(d);
+              renderComment(d, item.kids[i], 0, i, item.by);
+            }
           });
         });
       }
 
       function renderLinks(item) {
-        let links = document.getElementById("links");
-        links.innerHTML = `<a href="${item.url || HACKER_NEWS_ITEM + item.id}">${item.title}</a>${
+        document.getElementById("links").innerHTML = `<a href="${item.url || HACKER_NEWS_ITEM + item.id}">${
+          item.title
+        }</a>${
           item.descendants && item.descendants > 0
             ? ` (<a href="${HACKER_NEWS_ITEM + item.id}">${item.descendants} comments</a>)`
             : ""
@@ -166,33 +166,41 @@
       function renderComment(currentComment, id, depth, index, by) {
         let commentText = document.createElement("summary");
         currentComment.prepend(commentText);
-        if (depth >= COMMENT_TREE_DEPTH || index >= COMMENT_TREE_WIDTH) {
-          commentText.innerText = ELLIPSIS;
+
+        if (hasItem(id) || (depth <= COMMENT_TREE_DEPTH && index <= COMMENT_TREE_WIDTH)) {
+          render(depth);
           return;
         }
-        if (depth === 0) currentComment.classList.add("hidden");
-        requestItem(id).then((item) => {
-          commentText.innerHTML = item.deleted
-            ? "[deleted]"
-            : `${item.text} [<a class="${by === item.by ? "op" : ""}" href="${HACKER_NEWS_ITEM + id}">${item.by}</a>]`;
-          currentComment.classList.remove("hidden");
-          if (item.hasOwnProperty("kids")) {
-            for (let i = 0; i < Math.min(item.kids.length, COMMENT_TREE_WIDTH + 1); i++) {
-              let d = document.createElement("details");
-              currentComment.appendChild(d);
-              renderComment(d, item.kids[i], depth + 1, i, item.by);
-            }
+
+        commentText.innerText = ELLIPSIS;
+        currentComment.dataset.toRender = true;
+        currentComment.addEventListener("toggle", (event) => {
+          if (currentComment.open && currentComment.dataset.toRender) {
+            commentText.innerText = "loading" + ELLIPSIS;
+            render(0);
+            delete currentComment.dataset.toRender;
           }
         });
-      }
-      /* currentComment.addEventListener("toggle", reload);
-          function reload(event) {
-            if (currentComment.open && currentComment.firstChild.innerText === ELLIPSIS) {
-              currentComment.removeChild(currentComment.firstChild);
-              renderComment(currentComment, id, 0, index - COMMENT_TREE_WIDTH, by);
-              currentComment.removeEventListener("toggle", reload);
+
+        function render(depth2) {
+          getItem(id).then((item) => {
+            if (item === null || item.deleted) {
+              currentComment.remove();
+              return;
             }
-          } */
+            commentText.innerHTML = `${item.text} [<a class="${by === item.by ? "op" : ""}" href="${
+              HACKER_NEWS_ITEM + id
+            }">${item.by}</a>]`;
+            if (item.hasOwnProperty("kids")) {
+              for (let i = 0; i < item.kids.length; i++) {
+                let d = document.createElement("details");
+                currentComment.appendChild(d);
+                renderComment(d, item.kids[i], depth2 + 1, i, item.by);
+              }
+            }
+          });
+        }
+      }
 
       async function getItem(id) {
         let cached = sessionStorage.getItem(id);
@@ -211,8 +219,14 @@
 
       function cacheItem(item) {
         if (item && item.id) {
+          item.hnr_refresh = Date.now();
           sessionStorage.setItem(item.id, JSON.stringify(item));
         }
+      }
+
+      function hasItem(id) {
+        let item = sessionStorage.getItem(id);
+        return item !== null && JSON.parse(item).hnr_refresh > Date.now() - 7200_000;
       }
 
       function status(response) {
