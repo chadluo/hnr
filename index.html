@@ -132,7 +132,7 @@
           renderLinks(cachedItem);
           let comments = document.getElementById("comments");
           comments.innerHTML = "";
-          getItem(cachedItem.id).then((item) => {
+          requestItem(cachedItem.id).then((item) => {
             renderLinks(item);
             li.innerText = item.title;
             if (!item.hasOwnProperty("kids")) {
