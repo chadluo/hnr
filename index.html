@@ -34,7 +34,6 @@
       }
       #stories-picker a {
         cursor: pointer;
-        margin-right: 1em;
       }
       #stories-picker .selected {
         font-weight: bold;
@@ -92,9 +91,7 @@
     <main>
       <div id="news">
         <p id="stories-picker">
-          <a id="topstories">Top</a>
-          <a id="newstories">New</a>
-          <a id="beststories">Best</a>
+          <a id="topstories">Top</a> | <a id="newstories">New</a> | <a id="beststories">Best</a>
         </p>
         <ul id="news-list">
           loading…
@@ -122,6 +119,13 @@
 
       function refreshNewsItems() {
         let storyType = sessionStorage.getItem("storyType") || "topstories";
+        let storyTypeLink = document.getElementById(storyType);
+        if (storyTypeLink !== null) {
+          storyTypeLink.parentNode.childNodes.forEach((node) => {
+            if (node.tagName === "A") node.classList.remove("selected");
+          });
+          storyTypeLink.classList.add("selected");
+        }
         fetch(`${HACKER_NEWS_API}/${storyType}.json?limitToFirst=${COUNT}&orderBy="$priority"`)
           .then(status)
           .then(json)
@@ -130,48 +134,51 @@
             if (prevHighlight && !storyIds.includes(prevHighlight)) storyIds.push(prevHighlight);
             return Promise.all(storyIds.map(getItem));
           })
-          .then((cachedItems) => {
+          .then((items) => {
             let news = document.getElementById("news-list");
             news.innerText = "";
-            cachedItems.forEach((cachedItem) => renderNewsItem(news, cachedItem));
+            let prevHighlight = parseInt(sessionStorage.getItem(HIGHLIGHT));
+            items.forEach((item) => {
+              let li = document.createElement("li");
+              li.innerText = item.title;
+              li.dataset.id = item.id;
+              if (item.id === prevHighlight) li.classList.add(HIGHLIGHT);
+              news.appendChild(li);
+            });
           });
       }
 
-      function renderNewsItem(news, cachedItem) {
-        let li = document.createElement("li");
-        li.innerText = cachedItem.title;
-        if (cachedItem.id === parseInt(sessionStorage.getItem(HIGHLIGHT))) li.classList.add(HIGHLIGHT);
-        news.appendChild(li);
-        li.addEventListener("click", () => {
-          news.childNodes.forEach((item) => item.classList.remove(HIGHLIGHT));
-          li.classList.add(HIGHLIGHT);
-          sessionStorage.setItem(HIGHLIGHT, cachedItem.id);
-          renderLinks(cachedItem);
-          let comments = document.getElementById("comments");
-          comments.innerHTML = "";
-          requestItem(cachedItem.id).then((item) => {
-            renderLinks(item);
-            li.innerText = item.title;
-            if (!item.hasOwnProperty("kids")) {
-              comments.appendChild(document.createTextNode("No comments yet."));
-              return;
-            }
-            for (let i = 0; i < item.kids.length; i++) {
-              let d = document.createElement("details");
-              comments.appendChild(d);
-              renderComment(d, item.kids[i], 0, i, item.by);
-            }
-            cacheItem(item);
+      document.getElementById("news-list").addEventListener("click", (event) => {
+        if (event.target.tagName !== "LI") return;
+        let li = event.target;
+        let itemId = li.dataset.id;
+        li.parentNode.childNodes.forEach((item) => item.classList.remove(HIGHLIGHT));
+        li.classList.add(HIGHLIGHT);
+        sessionStorage.setItem(HIGHLIGHT, itemId);
+        let comments = document.getElementById("comments");
+        comments.innerHTML = "";
+        requestItem(itemId).then((item) => {
+          renderLinks(item);
+          li.innerText = item.title;
+          if (!item.hasOwnProperty("kids")) {
+            comments.appendChild(document.createTextNode("No comments yet."));
+            return;
+          }
+          item.kids.forEach((kid, index) => {
+            let d = document.createElement("details");
+            comments.appendChild(d);
+            renderComment(d, kid, 0, index, item.by);
           });
+          cacheItem(item);
         });
-      }
+      });
 
       function renderLinks(item) {
         document.getElementById("links").innerHTML = `<a href="${item.url || HACKER_NEWS_ITEM + item.id}">${
           item.title
         }</a>${
           item.descendants && item.descendants > 0
-            ? ` (<a href="${HACKER_NEWS_ITEM + item.id}">${item.descendants} comments</a>)`
+            ? ` | <a href="${HACKER_NEWS_ITEM + item.id}">${item.descendants} comments</a>`
             : ""
         }`;
       }
@@ -218,7 +225,6 @@
       document.getElementById("stories-picker").addEventListener("click", (event) => {
         let link = event.target;
         if (link.tagName !== "A") return;
-        console.log(link.parentNode.childNodes);
         link.parentNode.childNodes.forEach((node) => {
           if (node.tagName === "A") node.classList.remove("selected");
         });
