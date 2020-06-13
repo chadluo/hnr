@@ -29,6 +29,16 @@
         font-weight: 400;
         margin: 4rem 0;
       }
+      #stories-picker {
+        margin-top: 0;
+      }
+      #stories-picker a {
+        cursor: pointer;
+        margin-right: 1em;
+      }
+      #stories-picker .selected {
+        font-weight: bold;
+      }
       main {
         width: calc(100% - 2rem);
         max-width: 60rem;
@@ -41,7 +51,6 @@
         grid-column: span 2;
       }
       ul {
-        margin: 2px 0 0;
         padding: 0;
       }
       li {
@@ -81,9 +90,16 @@
   <body>
     <h1>Hacker News</h1>
     <main>
-      <ul id="news">
-        loading…
-      </ul>
+      <div id="news">
+        <p id="stories-picker">
+          <a id="topstories">Top</a>
+          <a id="newstories">New</a>
+          <a id="beststories">Best</a>
+        </p>
+        <ul id="news-list">
+          loading…
+        </ul>
+      </div>
       <div class="contents">
         <p id="links">Hacker News</p>
         <div id="comments">comments</div>
@@ -101,20 +117,21 @@
       let params = new URLSearchParams(window.location.search);
       const COUNT = params.get("count") || 20;
 
-      refreshHackerNews();
-      setInterval(refreshHackerNews, 60_000);
+      refreshNewsItems();
+      setInterval(refreshNewsItems, 60_000);
 
-      function refreshHackerNews() {
-        fetch(`${HACKER_NEWS_API}/topstories.json?limitToFirst=${COUNT}&orderBy="$priority"`)
+      function refreshNewsItems() {
+        let storyType = sessionStorage.getItem("storyType") || "topstories";
+        fetch(`${HACKER_NEWS_API}/${storyType}.json?limitToFirst=${COUNT}&orderBy="$priority"`)
           .then(status)
           .then(json)
-          .then((topStoryIds) => {
+          .then((storyIds) => {
             let prevHighlight = parseInt(sessionStorage.getItem(HIGHLIGHT));
-            if (prevHighlight && !topStoryIds.includes(prevHighlight)) topStoryIds.push(prevHighlight);
-            return Promise.all(topStoryIds.map(getItem));
+            if (prevHighlight && !storyIds.includes(prevHighlight)) storyIds.push(prevHighlight);
+            return Promise.all(storyIds.map(getItem));
           })
           .then((cachedItems) => {
-            let news = document.getElementById("news");
+            let news = document.getElementById("news-list");
             news.innerText = "";
             cachedItems.forEach((cachedItem) => renderNewsItem(news, cachedItem));
           });
@@ -144,6 +161,7 @@
               comments.appendChild(d);
               renderComment(d, item.kids[i], 0, i, item.by);
             }
+            cacheItem(item);
           });
         });
       }
@@ -196,6 +214,18 @@
           });
         }
       }
+
+      document.getElementById("stories-picker").addEventListener("click", (event) => {
+        let link = event.target;
+        if (link.tagName !== "A") return;
+        console.log(link.parentNode.childNodes);
+        link.parentNode.childNodes.forEach((node) => {
+          if (node.tagName === "A") node.classList.remove("selected");
+        });
+        link.classList.add("selected");
+        sessionStorage.setItem("storyType", link.id);
+        refreshNewsItems();
+      });
 
       async function getItem(id) {
         let cached = sessionStorage.getItem(id);
