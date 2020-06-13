@@ -174,7 +174,7 @@
         document.getElementById("links").innerHTML = `<a href="${item.url || HACKER_NEWS_ITEM + item.id}">${
           item.title
         }</a> | <a href="${HACKER_NEWS_ITEM + item.id}"> ${
-          item.descendants && item.descendants > 0 ? item.descendants + " comments" : "No comments yet"
+          item.descendants && item.descendants > 0 ? item.descendants + "&nbsp;comments" : "No comments yet"
         }`;
       }
 
