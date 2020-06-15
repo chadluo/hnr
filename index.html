@@ -35,7 +35,7 @@
       #stories-picker a {
         cursor: pointer;
       }
-      #stories-picker .selected {
+      #stories-picker .highlight {
         font-weight: bold;
       }
       main {
@@ -49,16 +49,16 @@
       .contents {
         grid-column: span 2;
       }
-      ul {
+      #news-list {
         padding: 0;
       }
-      li {
+      #news-list li {
         list-style: none;
         margin: -2px -0.25rem 0.5rem;
         padding: 0 0.25rem 2px;
         cursor: pointer;
       }
-      .highlight {
+      #news-list .highlight {
         background: #f60;
         color: white;
       }
@@ -110,9 +110,6 @@
       "use strict";
       const HACKER_NEWS_API = "https://hacker-news.firebaseio.com/v0";
       const HACKER_NEWS_ITEM = `https://news.ycombinator.com/item?id=`;
-      const COMMENT_TREE_WIDTH = 10;
-      const COMMENT_TREE_DEPTH = 3;
-      const ELLIPSIS = "…";
       const HIGHLIGHT = "highlight";
 
       let params = new URLSearchParams(window.location.search);
@@ -123,13 +120,6 @@
 
       function refreshNewsItems() {
         let storyType = sessionStorage.getItem("storyType") || "topstories";
-        let storyTypeLink = document.getElementById(storyType);
-        if (storyTypeLink !== null) {
-          storyTypeLink.parentNode.childNodes.forEach((node) => {
-            if (node.tagName === "A") node.classList.remove("selected");
-          });
-          storyTypeLink.classList.add("selected");
-        }
         fetch(`${HACKER_NEWS_API}/${storyType}.json?limitToFirst=${COUNT}&orderBy="$priority"`)
           .then(status)
           .then(json)
@@ -151,24 +141,41 @@
           });
       }
 
-      document.getElementById("news-list").addEventListener("click", (event) => {
+      document.getElementById("stories-picker").addEventListener("click", (event) => {
+        if (event.target.tagName !== "A") return;
+        let link = event.target;
+        highlight(link);
+        sessionStorage.setItem("storyType", link.id);
+        refreshNewsItems();
+      });
+
+      document.getElementById("news-list").addEventListener("click", async (event) => {
         if (event.target.tagName !== "LI") return;
         let li = event.target;
-        let itemId = li.dataset.id;
-        li.parentNode.childNodes.forEach((item) => item.classList.remove(HIGHLIGHT));
-        li.classList.add(HIGHLIGHT);
-        sessionStorage.setItem(HIGHLIGHT, itemId);
+        highlight(li);
         let comments = document.getElementById("comments");
         comments.innerHTML = "";
-        requestItem(itemId).then((item) => {
-          renderLinks(item);
-          li.innerText = item.title;
-          Promise.all(item.kids?.map((id) => requestComment(id, item.by))).then((cs) =>
-            cs.forEach((c) => comments.appendChild(c))
+        let itemId = li.dataset.id;
+        sessionStorage.setItem(HIGHLIGHT, itemId);
+        let item = await requestItem(itemId);
+        renderLinks(item);
+        li.innerText = item.title;
+        if ("kids" in item)
+          Promise.all(item.kids.map((id) => requestComment(id, item.by, true))).then((cs) =>
+            cs.filter(notNull).forEach((c) => comments.appendChild(c))
           );
-          cacheItem(item);
-        });
       });
+
+      function highlight(node) {
+        node.parentNode.childNodes.forEach((n) => {
+          if (n.tagName === node.tagName) n.classList.remove(HIGHLIGHT);
+        });
+        node.classList.add(HIGHLIGHT);
+      }
+
+      function notNull(x) {
+        return x !== null;
+      }
 
       function renderLinks(item) {
         document.getElementById("links").innerHTML = `<a href="${item.url || HACKER_NEWS_ITEM + item.id}">${
@@ -178,44 +185,37 @@
         }`;
       }
 
-      async function requestComment(id, op) {
+      function renderChildComments(comment, op, kids) {
+        if (!Array.isArray(kids)) return;
+        Promise.all(kids.map((id) => requestComment(id, op))).then((cs) =>
+          cs.filter(notNull).forEach((c) => {
+            comment.appendChild(c);
+            renderChildComments(c, op, c.kids);
+          })
+        );
+      }
+
+      async function requestComment(id, op, lazyLoad) {
         let comment = document.createElement("details");
         let commentText = comment.appendChild(document.createElement("summary"));
-        let item = await getItem(id);
+        let item = await requestItem(id);
+        if (item.deleted) return null;
         commentText.innerHTML = `${item.text} [<a class="${op === item.by ? "op" : ""}" href="${
           HACKER_NEWS_ITEM + id
         }">${item.by}</a>]`;
-        if ("kids" in item) comment.dataset.kids = item.kids;
-        comment.addEventListener("toggle", (event) => {
-          let comment = event.target;
-          if (comment.tagName !== "DETAILS" || !comment.open) return;
-          renderChildComments(comment, op);
-        });
+        if ("kids" in item) {
+          if (lazyLoad) {
+            comment.addEventListener("toggle", (event) => {
+              let c = event.target;
+              if (c.tagName !== "DETAILS" || !c.open) return;
+              renderChildComments(c, op, item.kids);
+            });
+          } else {
+            renderChildComments(comment, op, item.kids);
+          }
+        }
         return comment;
       }
-
-      function renderChildComments(comment, op) {
-        if (!comment.hasAttribute("data-kids")) return;
-        let kids = comment.dataset.kids.split(",");
-        Promise.all(kids.map((id) => requestComment(id, op))).then((cs) =>
-          cs.forEach((c) => {
-            comment.appendChild(c);
-            renderChildComments(c, op);
-          })
-        );
-        delete comment.dataset.kids;
-      }
-
-      document.getElementById("stories-picker").addEventListener("click", (event) => {
-        let link = event.target;
-        if (link.tagName !== "A") return;
-        link.parentNode.childNodes.forEach((node) => {
-          if (node.tagName === "A") node.classList.remove("selected");
-        });
-        link.classList.add("selected");
-        sessionStorage.setItem("storyType", link.id);
-        refreshNewsItems();
-      });
 
       async function getItem(id) {
         let cached = sessionStorage.getItem(id);
