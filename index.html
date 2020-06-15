@@ -163,9 +163,9 @@
         requestItem(itemId).then((item) => {
           renderLinks(item);
           li.innerText = item.title;
-          item.kids?.forEach((kid, i) => {
-            renderComment(comments.appendChild(document.createElement("details")), kid, 0, i, item.by);
-          });
+          Promise.all(item.kids?.map((id) => requestComment(id, item.by))).then((cs) =>
+            cs.forEach((c) => comments.appendChild(c))
+          );
           cacheItem(item);
         });
       });
@@ -178,39 +178,32 @@
         }`;
       }
 
-      function renderComment(currentComment, id, depth, index, by) {
-        let commentText = document.createElement("summary");
-        currentComment.prepend(commentText);
-
-        if (hasItem(id) || (depth <= COMMENT_TREE_DEPTH && index <= COMMENT_TREE_WIDTH)) {
-          render(depth);
-          return;
-        }
-
-        commentText.innerText = ELLIPSIS;
-        currentComment.dataset.toRender = true;
-        currentComment.addEventListener("toggle", (event) => {
-          if (currentComment.open && currentComment.dataset.toRender) {
-            commentText.innerText = "loading" + ELLIPSIS;
-            render(0);
-            delete currentComment.dataset.toRender;
-          }
+      async function requestComment(id, op) {
+        let comment = document.createElement("details");
+        let commentText = comment.appendChild(document.createElement("summary"));
+        let item = await getItem(id);
+        commentText.innerHTML = `${item.text} [<a class="${op === item.by ? "op" : ""}" href="${
+          HACKER_NEWS_ITEM + id
+        }">${item.by}</a>]`;
+        if ("kids" in item) comment.dataset.kids = item.kids;
+        comment.addEventListener("toggle", (event) => {
+          let comment = event.target;
+          if (comment.tagName !== "DETAILS" || !comment.open) return;
+          renderChildComments(comment, op);
         });
+        return comment;
+      }
 
-        function render(depth2) {
-          getItem(id).then((item) => {
-            if (item === null || item.deleted) {
-              currentComment.remove();
-              return;
-            }
-            commentText.innerHTML = `${item.text} [<a class="${by === item.by ? "op" : ""}" href="${
-              HACKER_NEWS_ITEM + id
-            }">${item.by}</a>]`;
-            item.kids?.forEach((kid, i) => {
-              renderComment(currentComment.appendChild(document.createElement("details")), kid, depth2 + 1, i, item.by);
-            });
-          });
-        }
+      function renderChildComments(comment, op) {
+        if (!comment.hasAttribute("data-kids")) return;
+        let kids = comment.dataset.kids.split(",");
+        Promise.all(kids.map((id) => requestComment(id, op))).then((cs) =>
+          cs.forEach((c) => {
+            comment.appendChild(c);
+            renderChildComments(c, op);
+          })
+        );
+        delete comment.dataset.kids;
       }
 
       document.getElementById("stories-picker").addEventListener("click", (event) => {
