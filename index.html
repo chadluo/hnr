@@ -163,17 +163,6 @@
           );
       });
 
-      function highlight(node) {
-        node.parentNode.childNodes.forEach((n) => {
-          if (n.tagName === node.tagName) n.classList.remove(HIGHLIGHT);
-        });
-        node.classList.add(HIGHLIGHT);
-      }
-
-      function notNull(x) {
-        return x !== null;
-      }
-
       function renderLinks(item) {
         document.getElementById("links").innerHTML = `<a href="${item.url || HACKER_NEWS_ITEM + item.id}">${
           item.title
@@ -202,12 +191,23 @@
         }">${item.by}</a>]`;
         if ("kids" in item) {
           if (lazyLoad) {
-            comment.addEventListener("toggle", (event) => renderChildComments(comment, op, item.kids), { once: true });
+            comment.addEventListener("toggle", () => renderChildComments(comment, op, item.kids), { once: true });
           } else {
             renderChildComments(comment, op, item.kids);
           }
         }
         return comment;
+      }
+
+      function highlight(node) {
+        node.parentNode.childNodes.forEach((n) => {
+          if (n.tagName === node.tagName) n.classList.remove(HIGHLIGHT);
+        });
+        node.classList.add(HIGHLIGHT);
+      }
+
+      function notNull(x) {
+        return x !== null;
       }
 
       async function getItem(id) {
@@ -230,11 +230,6 @@
           item.hnr_refresh = Date.now();
           sessionStorage.setItem(item.id, JSON.stringify(item));
         }
-      }
-
-      function hasItem(id) {
-        let item = sessionStorage.getItem(id);
-        return item !== null && JSON.parse(item).hnr_refresh > Date.now() - 7200_000;
       }
 
       function status(response) {
