@@ -17,9 +17,6 @@
         color: #f60;
         transition: 0.2s;
       }
-      a:visited {
-        color: #666;
-      }
       a:hover {
         text-decoration: underline;
       }
@@ -196,20 +193,16 @@
       }
 
       async function requestComment(id, op, lazyLoad) {
+        let item = await requestItem(id);
+        if (item.deleted || item.dead) return null;
         let comment = document.createElement("details");
         let commentText = comment.appendChild(document.createElement("summary"));
-        let item = await requestItem(id);
-        if (item.deleted) return null;
-        commentText.innerHTML = `${item.text} [<a class="${op === item.by ? "op" : ""}" href="${
+        commentText.innerHTML = `${item.text} [<a ${op === item.by ? "class='op'" : ""} href="${
           HACKER_NEWS_ITEM + id
         }">${item.by}</a>]`;
         if ("kids" in item) {
           if (lazyLoad) {
-            comment.addEventListener("toggle", (event) => {
-              let c = event.target;
-              if (c.tagName !== "DETAILS" || !c.open) return;
-              renderChildComments(c, op, item.kids);
-            });
+            comment.addEventListener("toggle", (event) => renderChildComments(comment, op, item.kids), { once: true });
           } else {
             renderChildComments(comment, op, item.kids);
           }
