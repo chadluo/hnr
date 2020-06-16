@@ -147,7 +147,10 @@
               let li = news.appendChild(document.createElement("li"));
               li.innerText = item.title;
               li.dataset.id = item.id;
-              if (item.id === prevHighlight) li.classList.add(HIGHLIGHT);
+              if (item.id === prevHighlight) {
+                li.classList.add(HIGHLIGHT);
+                renderNewsItem(li);
+              }
             });
           });
       }
@@ -160,10 +163,14 @@
         refreshNewsItems();
       });
 
-      document.getElementById("news-list").addEventListener("click", async (event) => {
+      document.getElementById("news-list").addEventListener("click", (event) => {
         if (event.target.tagName !== "LI") return;
         let li = event.target;
         highlight(li);
+        renderNewsItem(li);
+      });
+
+      async function renderNewsItem(li) {
         let comments = document.getElementById("comments");
         comments.innerHTML = "";
         let itemId = li.dataset.id;
@@ -175,7 +182,7 @@
           Promise.all(item.kids.map((id) => requestComment(id, item.by, true))).then((cs) =>
             cs.filter(notNull).forEach((c) => comments.appendChild(c))
           );
-      });
+      }
 
       function renderLinks(item) {
         document.getElementById("links").innerHTML = `<a href="${item.url || HACKER_NEWS_ITEM + item.id}">${
