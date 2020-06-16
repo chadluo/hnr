@@ -63,20 +63,29 @@
         margin-top: 0;
         font-weight: bold;
       }
-      details {
-        margin-bottom: 1rem;
-        padding-right: 1rem;
-        border-right: 2px solid white;
-      }
-      details[open] {
-        border-color: #f60;
-      }
-      summary {
-        outline: none;
+      details + details {
+        margin-top: 1rem;
+        border-top: 1px solid #dfdfdf;
+        padding-top: 1em;
       }
       details details {
         margin-top: 1rem;
         margin-left: 2rem;
+      }
+      summary {
+        outline: none;
+      }
+      summary::marker {
+        color: #f60;
+      }
+      summary::-webkit-details-marker {
+        color: #f60;
+      }
+      .empty summary {
+        list-style: none;
+      }
+      .empty summary::-webkit-details-marker {
+        display: none;
       }
       .op {
         font-weight: bold;
@@ -88,7 +97,7 @@
     <main>
       <div id="news">
         <p id="stories-picker">
-          <a id="topstories">Top</a> | <a id="newstories">New</a> | <a id="beststories">Best</a>
+          <a id="topstories" class="highlight">Top</a> | <a id="newstories">New</a> | <a id="beststories">Best</a>
         </p>
         <ul id="news-list">
           loading…
@@ -183,7 +192,8 @@
 
       async function requestComment(id, op, lazyLoad) {
         let item = await requestItem(id);
-        if (item.deleted || item.dead) return null;
+        if (item === null || item.deleted || item.dead) return null;
+        cacheItem(item);
         let comment = document.createElement("details");
         let commentText = comment.appendChild(document.createElement("summary"));
         commentText.innerHTML = `${item.text} [<a ${op === item.by ? "class='op'" : ""} href="${
@@ -195,6 +205,8 @@
           } else {
             renderChildComments(comment, op, item.kids);
           }
+        } else {
+          comment.classList.add("empty");
         }
         return comment;
       }
