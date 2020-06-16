@@ -72,6 +72,10 @@
         margin-top: 1rem;
         margin-left: 2rem;
       }
+      details.loading::after {
+        content: "…";
+        margin-left: 2rem;
+      }
       summary {
         outline: none;
       }
@@ -117,6 +121,7 @@
       const HACKER_NEWS_API = "https://hacker-news.firebaseio.com/v0";
       const HACKER_NEWS_ITEM = `https://news.ycombinator.com/item?id=`;
       const HIGHLIGHT = "highlight";
+      const LOADING = "loading";
 
       let params = new URLSearchParams(window.location.search);
       const COUNT = params.get("count") || 20;
@@ -182,12 +187,9 @@
 
       function renderChildComments(comment, op, kids) {
         if (!Array.isArray(kids)) return;
-        let ellipsis = document.createElement("p");
-        ellipsis.innerText = "…";
-        ellipsis.style = "text-indent:2em;";
-        comment.appendChild(ellipsis);
+        comment.classList.add(LOADING);
         Promise.all(kids.map((id) => requestComment(id, op))).then((cs) => {
-          comment.removeChild(ellipsis);
+          comment.classList.remove(LOADING);
           cs.filter(notNull).forEach((c) => {
             comment.appendChild(c);
             renderChildComments(c, op, c.kids);
