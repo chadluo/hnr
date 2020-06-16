@@ -182,12 +182,17 @@
 
       function renderChildComments(comment, op, kids) {
         if (!Array.isArray(kids)) return;
-        Promise.all(kids.map((id) => requestComment(id, op))).then((cs) =>
+        let ellipsis = document.createElement("p");
+        ellipsis.innerText = "…";
+        ellipsis.style = "text-indent:2em;";
+        comment.appendChild(ellipsis);
+        Promise.all(kids.map((id) => requestComment(id, op))).then((cs) => {
+          comment.removeChild(ellipsis);
           cs.filter(notNull).forEach((c) => {
             comment.appendChild(c);
             renderChildComments(c, op, c.kids);
-          })
-        );
+          });
+        });
       }
 
       async function requestComment(id, op, lazyLoad) {
