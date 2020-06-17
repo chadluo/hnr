@@ -175,7 +175,7 @@
         let item = await requestItem(itemId);
         li.innerText = item.title;
         renderLinks(item);
-        if (!"kids" in item) return;
+        if (!("kids" in item)) return;
         let cs = await Promise.all(item.kids.map((id) => requestComment(id, item.by, true)));
         cs.filter(notNull).forEach((c) => comments.appendChild(c));
       }
@@ -208,7 +208,7 @@
         commentText.innerHTML = `${item.text} [<a ${op === item.by ? "class='op'" : ""} href="${
           HACKER_NEWS_ITEM + id
         }">${item.by}</a>]`;
-        if (!"kids" in item) {
+        if (!("kids" in item)) {
           comment.classList.add("empty");
         } else if (lazyLoad) {
           comment.addEventListener("toggle", () => renderChildComments(comment, op, item.kids), { once: true });
