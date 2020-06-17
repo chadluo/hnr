@@ -101,7 +101,7 @@
     <main>
       <div id="news">
         <p id="stories-picker">
-          <a id="topstories" class="highlight">Top</a> | <a id="newstories">New</a> | <a id="beststories">Best</a>
+          <a id="topstories">Top</a> | <a id="newstories">New</a> | <a id="beststories">Best</a>
         </p>
         <ul id="news-list">
           loading…
@@ -126,33 +126,30 @@
       let params = new URLSearchParams(window.location.search);
       const COUNT = params.get("count") || 20;
 
-      refreshNewsItems();
-      setInterval(refreshNewsItems, 60_000);
+      refreshNewsList(true);
+      setInterval(refreshNewsList, 60_000);
 
-      function refreshNewsItems() {
+      async function refreshNewsList(alsoLoadComments) {
         let storyType = sessionStorage.getItem("storyType") || "topstories";
-        fetch(`${HACKER_NEWS_API}/${storyType}.json?limitToFirst=${COUNT}&orderBy="$priority"`)
+        let link = document.getElementById(storyType);
+        highlight(link);
+        let storyIds = await fetch(`${HACKER_NEWS_API}/${storyType}.json?limitToFirst=${COUNT}&orderBy="$priority"`)
           .then(status)
-          .then(json)
-          .then((storyIds) => {
-            let prevHighlight = parseInt(sessionStorage.getItem(HIGHLIGHT));
-            if (prevHighlight && !storyIds.includes(prevHighlight)) storyIds.push(prevHighlight);
-            return Promise.all(storyIds.map(getItem));
-          })
-          .then((items) => {
-            let news = document.getElementById("news-list");
-            news.innerText = "";
-            let prevHighlight = parseInt(sessionStorage.getItem(HIGHLIGHT));
-            items.forEach((item) => {
-              let li = news.appendChild(document.createElement("li"));
-              li.innerText = item.title;
-              li.dataset.id = item.id;
-              if (item.id === prevHighlight) {
-                li.classList.add(HIGHLIGHT);
-                renderNewsItem(li);
-              }
-            });
-          });
+          .then(json);
+        let prevHighlight = parseInt(sessionStorage.getItem(HIGHLIGHT));
+        if (prevHighlight && !storyIds.includes(prevHighlight)) storyIds.push(prevHighlight);
+        let items = await Promise.all(storyIds.map(getItem));
+        let news = document.getElementById("news-list");
+        news.innerText = "";
+        items.forEach((item) => {
+          let li = news.appendChild(document.createElement("li"));
+          li.innerText = item.title;
+          li.dataset.id = item.id;
+          if (item.id === prevHighlight) {
+            li.classList.add(HIGHLIGHT);
+            if (alsoLoadComments) renderNewsItem(li);
+          }
+        });
       }
 
       document.getElementById("stories-picker").addEventListener("click", (event) => {
@@ -160,7 +157,7 @@
         let link = event.target;
         highlight(link);
         sessionStorage.setItem("storyType", link.id);
-        refreshNewsItems();
+        refreshNewsList(false);
       });
 
       document.getElementById("news-list").addEventListener("click", (event) => {
@@ -176,12 +173,11 @@
         let itemId = li.dataset.id;
         sessionStorage.setItem(HIGHLIGHT, itemId);
         let item = await requestItem(itemId);
-        renderLinks(item);
         li.innerText = item.title;
-        if ("kids" in item)
-          Promise.all(item.kids.map((id) => requestComment(id, item.by, true))).then((cs) =>
-            cs.filter(notNull).forEach((c) => comments.appendChild(c))
-          );
+        renderLinks(item);
+        if (!"kids" in item) return;
+        let cs = await Promise.all(item.kids.map((id) => requestComment(id, item.by, true)));
+        cs.filter(notNull).forEach((c) => comments.appendChild(c));
       }
 
       function renderLinks(item) {
@@ -192,15 +188,14 @@
         }`;
       }
 
-      function renderChildComments(comment, op, kids) {
+      async function renderChildComments(comment, op, kids) {
         if (!Array.isArray(kids)) return;
         comment.classList.add(LOADING);
-        Promise.all(kids.map((id) => requestComment(id, op))).then((cs) => {
-          comment.classList.remove(LOADING);
-          cs.filter(notNull).forEach((c) => {
-            comment.appendChild(c);
-            renderChildComments(c, op, c.kids);
-          });
+        let cs = await Promise.all(kids.map((id) => requestComment(id, op)));
+        comment.classList.remove(LOADING);
+        cs.filter(notNull).forEach((c) => {
+          comment.appendChild(c);
+          renderChildComments(c, op, c.kids);
         });
       }
 
@@ -213,14 +208,12 @@
         commentText.innerHTML = `${item.text} [<a ${op === item.by ? "class='op'" : ""} href="${
           HACKER_NEWS_ITEM + id
         }">${item.by}</a>]`;
-        if ("kids" in item) {
-          if (lazyLoad) {
-            comment.addEventListener("toggle", () => renderChildComments(comment, op, item.kids), { once: true });
-          } else {
-            renderChildComments(comment, op, item.kids);
-          }
-        } else {
+        if (!"kids" in item) {
           comment.classList.add("empty");
+        } else if (lazyLoad) {
+          comment.addEventListener("toggle", () => renderChildComments(comment, op, item.kids), { once: true });
+        } else {
+          renderChildComments(comment, op, item.kids);
         }
         return comment;
       }
