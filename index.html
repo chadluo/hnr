@@ -122,6 +122,7 @@
       const HACKER_NEWS_ITEM = `https://news.ycombinator.com/item?id=`;
       const HIGHLIGHT = "highlight";
       const LOADING = "loading";
+      const CLUSTER_SIZE = 10;
 
       let params = new URLSearchParams(window.location.search);
       const COUNT = params.get("count") || 20;
@@ -169,15 +170,25 @@
 
       async function renderNewsItem(li) {
         let comments = document.getElementById("comments");
-        comments.innerHTML = "";
+        comments.innerText = "loading…";
         let itemId = li.dataset.id;
         sessionStorage.setItem(HIGHLIGHT, itemId);
         let item = await requestItem(itemId);
         li.innerText = item.title;
         renderLinks(item);
-        if (!("kids" in item)) return;
-        let cs = await Promise.all(item.kids.map((id) => requestComment(id, item.by, true)));
-        cs.filter(notNull).forEach((c) => comments.appendChild(c));
+        if (!("kids" in item)) {
+          comments.innerText = "";
+          return;
+        }
+        comments.innerText = "";
+        renderCluster(item.kids, item.by, 0);
+        async function renderCluster(kids, by, index) {
+          if (index >= kids.length) return;
+          let currentCluster = kids.slice(index, Math.min(index + CLUSTER_SIZE, kids.length));
+          let cs = await Promise.all(currentCluster.map((id) => requestComment(id, by, true)));
+          cs.filter(notNull).forEach((c) => comments.appendChild(c));
+          renderCluster(kids, by, index + CLUSTER_SIZE);
+        }
       }
 
       function renderLinks(item) {
