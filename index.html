@@ -5,17 +5,26 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Hacker News</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Cinzel&family=Source+Sans+Pro:ital,wght@0,400;0,700;1,400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cinzel&family=Source+Code+Pro:wght@500&family=Source+Sans+Pro:ital,wght@0,400;0,600;1,400&display=swap"
       rel="stylesheet"
     />
     <style>
+      :root {
+        font-size: 20px;
+        --hnr-baseline-grid: 26px;
+        --hnr-gap: 2px;
+      }
       body {
-        font-family: "Source Sans Pro", sans-serif;
+        font: 1rem / var(--hnr-baseline-grid) "Source Sans Pro", sans-serif;
+        margin: 2rem;
       }
       a {
         text-decoration: none;
         color: #f60;
         transition: 0.2s;
+      }
+      p {
+        margin: var(--hnr-baseline-grid) 0;
       }
       a:hover {
         text-decoration: underline;
@@ -24,7 +33,7 @@
         text-align: center;
         font: 4rem/1 "Cinzel", serif;
         font-weight: 400;
-        margin: 4rem 0;
+        margin: calc(var(--hnr-baseline-grid) * 4) 0 calc(var(--hnr-baseline-grid) * 3);
       }
       #stories-picker {
         margin-top: 0;
@@ -36,8 +45,7 @@
         font-weight: bold;
       }
       main {
-        width: calc(100% - 2rem);
-        max-width: 60rem;
+        max-width: 64rem;
         margin: auto;
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -51,8 +59,8 @@
       }
       #news-list li {
         list-style: none;
-        margin: -2px -0.25rem 0.5rem;
-        padding: 0 0.25rem 2px;
+        margin: 0 -0.25rem calc(var(--hnr-baseline-grid) / 2 - var(--hnr-gap));
+        padding: 0 0.25rem var(--hnr-gap);
         cursor: pointer;
       }
       #news-list .highlight {
@@ -63,13 +71,17 @@
         margin-top: 0;
         font-weight: bold;
       }
+      details p {
+        margin: calc(var(--hnr-baseline-grid) / 2) 0;
+      }
       details + details {
-        margin-top: 1rem;
+        margin-top: var(--hnr-baseline-grid);
+        box-sizing: border-box;
         border-top: 1px solid #dfdfdf;
-        padding-top: 1em;
+        padding-top: calc(var(--hnr-baseline-grid) - 1px);
       }
       details details {
-        margin-top: 1rem;
+        margin-top: var(--hnr-baseline-grid);
         margin-left: 2rem;
       }
       details.loading::after {
@@ -84,6 +96,14 @@
       }
       summary::-webkit-details-marker {
         color: #f60;
+      }
+      pre {
+        font-size: calc(var(--hnr-baseline-grid) * 2 / 3);
+        line-height: 1;
+      }
+      code {
+        font-family: "Source Code Pro", monospace;
+        font-weight: 500;
       }
       .empty summary {
         list-style: none;
@@ -213,7 +233,6 @@
       async function requestComment(id, op, lazyLoad) {
         let item = await requestItem(id);
         if (item === null || item.deleted || item.dead) return null;
-        cacheItem(item);
         let comment = document.createElement("details");
         let commentText = comment.appendChild(document.createElement("summary"));
         commentText.innerHTML = `${item.text} [<a ${op === item.by ? "class='op'" : ""} href="${
