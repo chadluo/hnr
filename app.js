@@ -12,13 +12,13 @@ refreshNewsList(true)
 setInterval(refreshNewsList, 60000)
 
 async function refreshNewsList (alsoLoadComments) {
-  const storyType = sessionStorage.getItem('storyType') || 'topstories'
+  const storyType = localStorage.getItem('storyType') || 'topstories'
   const link = document.getElementById(storyType)
   highlight(link)
   const storyIds = await fetch(`${HACKER_NEWS_API}/${storyType}.json?limitToFirst=${COUNT}&orderBy="$priority"`)
     .then(status)
     .then(json)
-  const prevHighlight = parseInt(sessionStorage.getItem(HIGHLIGHT))
+  const prevHighlight = parseInt(localStorage.getItem(HIGHLIGHT))
   if (prevHighlight && !storyIds.includes(prevHighlight)) storyIds.push(prevHighlight)
   const items = await Promise.all(storyIds.map(getItem))
   const news = document.getElementById('news-list')
@@ -38,7 +38,7 @@ document.getElementById('stories-picker').addEventListener('click', (event) => {
   if (event.target.tagName !== 'A') return
   const link = event.target
   highlight(link)
-  sessionStorage.setItem('storyType', link.id)
+  localStorage.setItem('storyType', link.id)
   refreshNewsList(false)
 })
 
@@ -53,7 +53,7 @@ async function renderNewsItem (li) {
   const comments = document.getElementById('comments')
   comments.innerText = 'loading…'
   const itemId = li.dataset.id
-  sessionStorage.setItem(HIGHLIGHT, itemId)
+  localStorage.setItem(HIGHLIGHT, itemId)
   const item = await requestItem(itemId)
   li.innerText = item.title
   renderLinks(item)
