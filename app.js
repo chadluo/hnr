@@ -91,17 +91,6 @@ function renderLinks (item) {
   }`
 }
 
-async function renderChildComments (comment, op, kids) {
-  if (!Array.isArray(kids)) return
-  comment.classList.add(LOADING)
-  const cs = await Promise.all(kids.map((id) => requestComment(id, op)))
-  comment.classList.remove(LOADING)
-  cs.filter(notNull).forEach((c) => {
-    comment.appendChild(c)
-    renderChildComments(c, op, c.kids)
-  })
-}
-
 async function requestComment (id, op, lazyLoad) {
   const item = await requestItem(id)
   if (item === null || item.deleted || item.dead) return null
@@ -118,6 +107,17 @@ async function requestComment (id, op, lazyLoad) {
     renderChildComments(comment, op, item.kids)
   }
   return comment
+}
+
+async function renderChildComments (comment, op, kids) {
+  if (!Array.isArray(kids)) return
+  comment.classList.add(LOADING)
+  const cs = await Promise.all(kids.map((id) => requestComment(id, op)))
+  comment.classList.remove(LOADING)
+  cs.filter(notNull).forEach((c) => {
+    comment.appendChild(c)
+    renderChildComments(c, op, c.kids)
+  })
 }
 
 function highlight (node) {
