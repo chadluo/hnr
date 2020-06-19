@@ -107,3 +107,9 @@ code {
 .op {
   font-weight: bold;
 }
+#load-cluster {
+  cursor: pointer;
+}
+.hidden {
+  display: none;
+}

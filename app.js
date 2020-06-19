@@ -3,6 +3,7 @@ const HACKER_NEWS_API = 'https://hacker-news.firebaseio.com/v0'
 const HACKER_NEWS_ITEM = 'https://news.ycombinator.com/item?id='
 const HIGHLIGHT = 'highlight'
 const LOADING = 'loading'
+const LOADING_TEXT = 'loading…'
 const CLUSTER_SIZE = 10
 
 const params = new URLSearchParams(window.location.search)
@@ -51,7 +52,7 @@ document.getElementById('news-list').addEventListener('click', (event) => {
 
 async function renderNewsItem (li) {
   const comments = document.getElementById('comments')
-  comments.innerText = 'loading…'
+  comments.innerText = LOADING_TEXT
   const itemId = li.dataset.id
   localStorage.setItem(HIGHLIGHT, itemId)
   const item = await requestItem(itemId)
@@ -62,13 +63,23 @@ async function renderNewsItem (li) {
     return
   }
   comments.innerText = ''
+  const loader = document.getElementById('load-cluster')
   renderCluster(item.kids, item.by, 0)
-  async function renderCluster (kids, by, index) {
-    if (index >= kids.length) return
-    const currentCluster = kids.slice(index, Math.min(index + CLUSTER_SIZE, kids.length))
+  async function renderCluster (kids, by, begin) {
+    const end = begin + CLUSTER_SIZE
+    const currentCluster = kids.slice(begin, Math.min(end, kids.length))
     const cs = await Promise.all(currentCluster.map((id) => requestComment(id, by, true)))
     cs.filter(notNull).forEach((c) => comments.appendChild(c))
-    renderCluster(kids, by, index + CLUSTER_SIZE)
+    if (end < kids.length) {
+      loader.innerText = 'Load more comments'
+      loader.addEventListener('click', () => {
+        loader.innerText = LOADING_TEXT
+        renderCluster(kids, by, end)
+      }, { once: true })
+      loader.classList.remove('hidden')
+    } else {
+      loader.classList.add('hidden')
+    }
   }
 }
 
