@@ -8,6 +8,7 @@ const CLUSTER_SIZE = 10
 
 const params = new URLSearchParams(window.location.search)
 const COUNT = params.get('count') || 20
+const I = params.get('i')
 
 refreshNewsList(true)
 setInterval(refreshNewsList, 60000)
@@ -19,7 +20,7 @@ async function refreshNewsList (alsoLoadComments) {
   const storyIds = await fetch(`${HACKER_NEWS_API}/${storyType}.json?limitToFirst=${COUNT}&orderBy="$priority"`)
     .then(fetchStatus)
     .then(json)
-  const prevHighlight = parseInt(localStorage.getItem(HIGHLIGHT))
+  const prevHighlight = parseInt(I || localStorage.getItem(HIGHLIGHT))
   if (prevHighlight && !storyIds.includes(prevHighlight)) storyIds.push(prevHighlight)
   const items = await Promise.all(storyIds.map(getItem))
   const news = document.getElementById('news-list')
