@@ -17,7 +17,7 @@ async function refreshNewsList (alsoLoadComments) {
   const link = document.getElementById(storyType)
   highlight(link)
   const storyIds = await fetch(`${HACKER_NEWS_API}/${storyType}.json?limitToFirst=${COUNT}&orderBy="$priority"`)
-    .then(status)
+    .then(fetchStatus)
     .then(json)
   const prevHighlight = parseInt(localStorage.getItem(HIGHLIGHT))
   if (prevHighlight && !storyIds.includes(prevHighlight)) storyIds.push(prevHighlight)
@@ -58,23 +58,21 @@ async function renderNewsItem (li) {
   const item = await requestItem(itemId)
   li.innerText = item.title
   renderLinks(item)
-  if (!('kids' in item)) {
-    comments.innerText = ''
-    return
-  }
   comments.innerText = ''
-  const loader = document.getElementById('load-cluster')
+  if (!('kids' in item)) return
   renderCluster(item.kids, item.by, 0)
-  async function renderCluster (kids, by, begin) {
+
+  async function renderCluster (kids, op, begin) {
+    const loader = document.getElementById('load-cluster')
     const end = begin + CLUSTER_SIZE
     const currentCluster = kids.slice(begin, Math.min(end, kids.length))
-    const cs = await Promise.all(currentCluster.map((id) => requestComment(id, by, true)))
+    const cs = await Promise.all(currentCluster.map((id) => requestComment(id, op)))
     cs.filter(notNull).forEach((c) => comments.appendChild(c))
     if (end < kids.length) {
       loader.innerText = 'Load more comments'
       loader.addEventListener('click', () => {
         loader.innerText = LOADING_TEXT
-        renderCluster(kids, by, end)
+        renderCluster(kids, op, end)
       }, { once: true })
       loader.classList.remove('hidden')
     } else {
@@ -91,20 +89,20 @@ function renderLinks (item) {
   }`
 }
 
-async function requestComment (id, op, lazyLoad) {
+async function requestComment (id, op, loadKidsNow) {
   const item = await requestItem(id)
   if (item === null || item.deleted || item.dead) return null
   const comment = document.createElement('details')
   const commentText = comment.appendChild(document.createElement('summary'))
-  commentText.innerHTML = `${item.text} [<a ${op === item.by ? "class='op'" : ''} href="${HACKER_NEWS_ITEM + id}">${
+  commentText.innerHTML = `${item.text} [<a ${op === item.by ? 'class="op"' : ''} href="${HACKER_NEWS_ITEM + id}">${
     item.by
   }</a>]`
   if (!('kids' in item)) {
     comment.classList.add('empty')
-  } else if (lazyLoad) {
-    comment.addEventListener('toggle', () => renderChildComments(comment, op, item.kids), { once: true })
-  } else {
+  } else if (loadKidsNow) {
     renderChildComments(comment, op, item.kids)
+  } else {
+    comment.addEventListener('toggle', () => renderChildComments(comment, op, item.kids), { once: true })
   }
   return comment
 }
@@ -112,7 +110,7 @@ async function requestComment (id, op, lazyLoad) {
 async function renderChildComments (comment, op, kids) {
   if (!Array.isArray(kids)) return
   comment.classList.add(LOADING)
-  const cs = await Promise.all(kids.map((id) => requestComment(id, op)))
+  const cs = await Promise.all(kids.map((id) => requestComment(id, op, true)))
   comment.classList.remove(LOADING)
   cs.filter(notNull).forEach((c) => {
     comment.appendChild(c)
@@ -143,17 +141,14 @@ async function getItem (id) {
 }
 
 function requestItem (id) {
-  return fetch(`${HACKER_NEWS_API}/item/${id}.json`).then(status).then(json)
+  return fetch(`${HACKER_NEWS_API}/item/${id}.json`).then(fetchStatus).then(json)
 }
 
 function cacheItem (item) {
-  if (item && item.id) {
-    item.hnr_refresh = Date.now()
-    sessionStorage.setItem(item.id, JSON.stringify(item))
-  }
+  if (item && item.id) sessionStorage.setItem(item.id, JSON.stringify(item))
 }
 
-function status (response) {
+function fetchStatus (response) {
   if (response.status >= 200 && response.status < 300) {
     return Promise.resolve(response)
   } else {
