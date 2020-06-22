@@ -1,6 +1,8 @@
 "use strict";
 const HACKER_NEWS_API = "https://hacker-news.firebaseio.com/v0";
 const HACKER_NEWS_ITEM = "https://news.ycombinator.com/item?id=";
+const SEARCH = "https://hn.algolia.com/?q=";
+
 const HIGHLIGHT = "highlight";
 const LOADING = "loading";
 const LOADING_TEXT = "loading…";
@@ -87,11 +89,11 @@ async function renderNewsItem(li) {
 }
 
 function renderLinks(item) {
-  document.getElementById("links").innerHTML = `<a href="${item.url || HACKER_NEWS_ITEM + item.id}">${
+  document.getElementById("header").innerHTML = `<a class='title' href="${item.url || HACKER_NEWS_ITEM + item.id}">${
     item.title
-  }</a> | <a href="${HACKER_NEWS_ITEM + item.id}"> ${
-    item.descendants && item.descendants > 0 ? item.descendants + "&nbsp;comments" : "No comments yet"
-  }`;
+  }</a><span>${item.url ? `<a href="${SEARCH + item.url}">⧉</a>&nbsp;` : ""}<a href="${HACKER_NEWS_ITEM + item.id}">${
+    item.descendants && item.descendants > 0 ? item.descendants : "—"
+  }</a></span>`;
 }
 
 async function requestComment(id, op, loadKidsNow) {

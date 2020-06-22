@@ -60,9 +60,16 @@ main {
   background: var(--hacker-news-theme);
   color: white;
 }
-#links {
-  margin-top: 0;
+#header {
+  margin-bottom: var(--hnr-baseline-grid);
+  display: flex;
+  justify-content: space-between;
+}
+.title {
   font-weight: bold;
+}
+#header span {
+  text-align: right;
 }
 details p {
   margin: calc(var(--hnr-baseline-grid) / 2) 0;
