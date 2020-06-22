@@ -5,7 +5,7 @@
   --hacker-news-theme: #f60;
 }
 body {
-  font: 1rem / var(--hnr-baseline-grid) "Source Sans Pro", sans-serif;
+  font: 1rem / var(--hnr-baseline-grid) source-sans-pro, sans-serif;
   margin: 2rem;
   text-rendering: geometricPrecision;
 }
@@ -103,7 +103,7 @@ pre {
   line-height: 1;
 }
 code {
-  font-family: "Source Code Pro", monospace;
+  font-family: source-code-pro, monospace;
   font-weight: 500;
 }
 .empty summary {
