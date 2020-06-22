@@ -29,6 +29,7 @@ h1 {
 }
 #stories-picker {
   margin-top: 0;
+  margin-bottom: calc(var(--hnr-baseline-grid) - 1px);
 }
 #stories-picker a {
   cursor: pointer;
@@ -51,8 +52,8 @@ main {
 }
 #news-list li {
   list-style: none;
-  margin: 0 -0.25rem calc(var(--hnr-baseline-grid) / 2 - var(--hnr-gap));
-  padding: 0 0.25rem var(--hnr-gap);
+  margin: 0 -0.25rem calc(var(--hnr-baseline-grid) / 2 - var(--hnr-gap) - 1px);
+  padding: 1px 0.25rem var(--hnr-gap);
   border-radius: 3px;
   cursor: pointer;
 }
@@ -78,7 +79,7 @@ details + details {
   margin-top: var(--hnr-baseline-grid);
   box-sizing: border-box;
   border-top: 1px solid #dfdfdf;
-  padding-top: calc(var(--hnr-baseline-grid) * 2 / 3 - 1px);
+  padding-top: calc(var(--hnr-baseline-grid) - 1px);
 }
 details details {
   margin-top: var(--hnr-baseline-grid);
