@@ -92,11 +92,17 @@ async function renderNewsItem(li) {
 }
 
 function renderLinks(item) {
-  document.getElementById("header").innerHTML = `<a class='title' href="${item.url || HACKER_NEWS_ITEM + item.id}">${
-    item.title
-  }</a><span>${item.url ? `<a href="${SEARCH + item.url}">⧉</a>&nbsp;` : ""}<a href="${HACKER_NEWS_ITEM + item.id}">${
-    item.descendants && item.descendants > 0 ? item.descendants : "—"
-  }</a></span>`;
+  document.getElementById("header").innerHTML = `<span><a class='title' href="${
+    item.url || HACKER_NEWS_ITEM + item.id
+  }">${item.title}</a>${
+    item.url
+      ? ` <span class="host">[<a href="${SEARCH + new URL(item.url).hostname}">${
+          new URL(item.url).hostname
+        }</a>]</span></span>`
+      : ""
+  }</span><span class="right">${item.url ? `<a href="${SEARCH + item.url}">⧉</a>&nbsp;` : ""}<a href="${
+    HACKER_NEWS_ITEM + item.id
+  }">${item.descendants && item.descendants > 0 ? item.descendants : "—"}</a></span>`;
 }
 
 async function requestComment(id, op, loadKidsNow) {

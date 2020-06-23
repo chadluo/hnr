@@ -3,10 +3,12 @@
   --hnr-baseline-grid: 22px;
   --hnr-news-item-gap-top: 1px;
   --hnr-news-item-gap-bottom: 2px;
+  --hnr-sans: source-sans-pro, sans-serif;
+  --hnr-mono: source-code-pro, monospace;
   --hacker-news-theme: #f60;
 }
 body {
-  font: 1rem / var(--hnr-baseline-grid) source-sans-pro, sans-serif;
+  font: 1rem / var(--hnr-baseline-grid) var(--hnr-sans);
   margin: 2rem;
   text-rendering: geometricPrecision;
 }
@@ -71,7 +73,11 @@ main {
 .title {
   font-weight: bold;
 }
-#header span {
+#header .host {
+  padding-right: 1rem;
+  display: inline-block;
+}
+#header .right {
   text-align: right;
 }
 details p {
@@ -105,7 +111,7 @@ pre {
   line-height: 1;
 }
 code {
-  font-family: source-code-pro, monospace;
+  font-family: var(--hnr-mono);
   font-weight: 500;
 }
 .empty summary {
