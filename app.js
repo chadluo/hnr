@@ -12,8 +12,10 @@ const params = new URLSearchParams(window.location.search);
 const COUNT = params.get("count") || 20;
 const I = params.get("i");
 
-refreshNewsList(true);
-setInterval(refreshNewsList, 60000);
+document.addEventListener("DOMContentLoaded", () => {
+  refreshNewsList(true);
+  setInterval(refreshNewsList, 60_000);
+});
 
 async function refreshNewsList(alsoLoadComments) {
   const storyType = localStorage.getItem("storyType") || "topstories";
@@ -64,6 +66,7 @@ async function renderNewsItem(li) {
   comments.innerText = "";
   if (!("kids" in item)) return;
   renderCluster(item.kids, item.by, 0);
+  cacheItem(item);
 
   async function renderCluster(kids, op, begin) {
     const loader = document.getElementById("load-cluster");

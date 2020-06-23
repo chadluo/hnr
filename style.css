@@ -1,7 +1,8 @@
 :root {
   font-size: 18px;
   --hnr-baseline-grid: 22px;
-  --hnr-gap: 2px;
+  --hnr-news-item-gap-top: 1px;
+  --hnr-news-item-gap-bottom: 2px;
   --hacker-news-theme: #f60;
 }
 body {
@@ -29,7 +30,7 @@ h1 {
 }
 #stories-picker {
   margin-top: 0;
-  margin-bottom: calc(var(--hnr-baseline-grid) - 1px);
+  margin-bottom: calc(var(--hnr-baseline-grid) - var(--hnr-news-item-gap-top));
 }
 #stories-picker a {
   cursor: pointer;
@@ -49,11 +50,12 @@ main {
 }
 #news-list {
   padding: 0;
+  margin: 0;
 }
 #news-list li {
   list-style: none;
-  margin: 0 -0.25rem calc(var(--hnr-baseline-grid) / 2 - var(--hnr-gap) - 1px);
-  padding: 1px 0.25rem var(--hnr-gap);
+  margin: 0 -0.25rem calc(var(--hnr-baseline-grid) / 2 - var(--hnr-news-item-gap-top) - var(--hnr-news-item-gap-bottom));
+  padding: var(--hnr-news-item-gap-top) 0.25rem var(--hnr-news-item-gap-bottom);
   border-radius: 3px;
   cursor: pointer;
 }
