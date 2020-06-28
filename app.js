@@ -90,7 +90,7 @@ async function showComments(li) {
 }
 
 function renderHeader(item) {
-  document.getElementById("header").innerHTML = `<span><a class='title' href="${
+  document.getElementById("header").innerHTML = `<p class="title-bar"><span><a class='title' href="${
     item.url || HACKER_NEWS_ITEM + item.id
   }">${item.title}</a>${
     item.url
@@ -100,7 +100,13 @@ function renderHeader(item) {
       : ""
   }</span><span class="right">${item.url ? `<a href="${SEARCH + item.url}">⧉</a>&nbsp;` : ""}<a href="${
     HACKER_NEWS_ITEM + item.id
-  }">${item.descendants && item.descendants > 0 ? item.descendants : "—"}</a></span>`;
+  }">${item.descendants && item.descendants > 0 ? item.descendants : "—"}</a></span></p>${
+    item.text ? `<article>${renderItemText(item, item.by)}</article>` : ""
+  }`;
+}
+
+function renderItemText(item, op) {
+  return `${item.text} [<a ${op === item.by ? 'class="op"' : ""} href="${HACKER_NEWS_ITEM + item.id}">${item.by}</a>]`;
 }
 
 async function requestComment(id, op, loadKidsNow) {
@@ -108,9 +114,7 @@ async function requestComment(id, op, loadKidsNow) {
   if (item === null || item.deleted || item.dead) return null;
   const comment = document.createElement("details");
   const commentText = comment.appendChild(document.createElement("summary"));
-  commentText.innerHTML = `${item.text} [<a ${op === item.by ? 'class="op"' : ""} href="${HACKER_NEWS_ITEM + id}">${
-    item.by
-  }</a>]`;
+  commentText.innerHTML = renderItemText(item, op);
   if (!("kids" in item)) {
     comment.classList.add("empty");
   } else if (loadKidsNow) {
