@@ -93,7 +93,7 @@ details details {
   margin-top: var(--hnr-baseline-grid);
   margin-left: 2rem;
 }
-details.loading::after {
+.loading::after {
   content: "…";
   margin-left: 2rem;
 }

@@ -3,39 +3,36 @@ const HACKER_NEWS_API = "https://hacker-news.firebaseio.com/v0";
 const HACKER_NEWS_ITEM = "https://news.ycombinator.com/item?id=";
 const SEARCH = "https://hn.algolia.com/?q=";
 
-const HIGHLIGHT = "highlight";
-const LOADING = "loading";
-const LOADING_TEXT = "loading…";
+const HIGHLIGHT_CLASS = "highlight";
+const HIGHLIGHT_KEY = "highlight";
+const LOADING_CLASS = "loading";
 const CLUSTER_SIZE = 10;
 
-const params = new URLSearchParams(window.location.search);
-const COUNT = params.get("count") || 20;
-const I = params.get("i");
-
 document.addEventListener("DOMContentLoaded", () => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has("i")) localStorage.setItem(HIGHLIGHT_KEY, params.get("i"));
   refreshNewsList(true);
-  setInterval(refreshNewsList, 60_000);
+  setInterval(refreshNewsList, 60 * 1000);
 });
 
 async function refreshNewsList(alsoLoadComments) {
-  const storyType = localStorage.getItem("storyType") || "topstories";
-  const link = document.getElementById(storyType);
-  highlight(link);
-  const storyIds = await fetch(`${HACKER_NEWS_API}/${storyType}.json?limitToFirst=${COUNT}&orderBy="$priority"`)
+  const storyType = localStorage.getItem("storyType").replace("stories", "") || "top";
+  highlight(document.getElementById(storyType));
+  const storyIds = await fetch(`${HACKER_NEWS_API}/${storyType}stories.json?limitToFirst=20&orderBy="$priority"`)
     .then(fetchStatus)
     .then(json);
-  const prevHighlight = parseInt(I || localStorage.getItem(HIGHLIGHT));
+  const prevHighlight = parseInt(localStorage.getItem(HIGHLIGHT_KEY));
   if (prevHighlight && !storyIds.includes(prevHighlight)) storyIds.push(prevHighlight);
   const items = await Promise.all(storyIds.map(getItem));
-  const news = document.getElementById("news-list");
-  news.innerText = "";
+  const newsList = document.getElementById("news-list");
+  newsList.innerHTML = "";
   items.forEach((item) => {
-    const li = news.appendChild(document.createElement("li"));
+    const li = newsList.appendChild(document.createElement("li"));
     li.innerText = item.title;
     li.dataset.id = item.id;
     if (item.id === prevHighlight) {
-      li.classList.add(HIGHLIGHT);
-      if (alsoLoadComments) renderNewsItem(li);
+      li.classList.add(HIGHLIGHT_CLASS);
+      if (alsoLoadComments) showComments(li);
     }
   });
 }
@@ -45,41 +42,42 @@ document.getElementById("stories-picker").addEventListener("click", (event) => {
   const link = event.target;
   highlight(link);
   localStorage.setItem("storyType", link.id);
-  refreshNewsList(false);
+  refreshNewsList();
 });
 
 document.getElementById("news-list").addEventListener("click", (event) => {
   if (event.target.tagName !== "LI") return;
   const li = event.target;
   highlight(li);
-  renderNewsItem(li);
+  showComments(li);
 });
 
-async function renderNewsItem(li) {
+async function showComments(li) {
   const comments = document.getElementById("comments");
-  comments.innerText = LOADING_TEXT;
+  comments.innerText = "";
+  const loader = document.getElementById("load-cluster");
+  loader.classList.add("hidden");
   const itemId = li.dataset.id;
-  localStorage.setItem(HIGHLIGHT, itemId);
+  localStorage.setItem(HIGHLIGHT_KEY, itemId);
+  comments.classList.add(LOADING_CLASS);
   const item = await requestItem(itemId);
   li.innerText = item.title;
-  renderLinks(item);
-  comments.innerText = "";
+  renderHeader(item);
+  comments.classList.remove(LOADING_CLASS);
   if (!("kids" in item)) return;
   renderCluster(item.kids, item.by, 0);
   cacheItem(item);
 
   async function renderCluster(kids, op, begin) {
-    const loader = document.getElementById("load-cluster");
     const end = begin + CLUSTER_SIZE;
     const currentCluster = kids.slice(begin, Math.min(end, kids.length));
     const cs = await Promise.all(currentCluster.map((id) => requestComment(id, op)));
-    cs.filter(notNull).forEach((c) => comments.appendChild(c));
+    cs.filter((c) => c !== null).forEach((c) => comments.appendChild(c));
     if (end < kids.length) {
       loader.innerText = "Load more comments";
       loader.addEventListener(
         "click",
         () => {
-          loader.innerText = LOADING_TEXT;
           renderCluster(kids, op, end);
         },
         { once: true }
@@ -91,7 +89,7 @@ async function renderNewsItem(li) {
   }
 }
 
-function renderLinks(item) {
+function renderHeader(item) {
   document.getElementById("header").innerHTML = `<span><a class='title' href="${
     item.url || HACKER_NEWS_ITEM + item.id
   }">${item.title}</a>${
@@ -125,35 +123,28 @@ async function requestComment(id, op, loadKidsNow) {
 
 async function renderChildComments(comment, op, kids) {
   if (!Array.isArray(kids)) return;
-  comment.classList.add(LOADING);
+  comment.classList.add(LOADING_CLASS);
   const cs = await Promise.all(kids.map((id) => requestComment(id, op, true)));
-  comment.classList.remove(LOADING);
-  cs.filter(notNull).forEach((c) => {
+  comment.classList.remove(LOADING_CLASS);
+  cs.filter((c) => c !== null).forEach((c) => {
     comment.appendChild(c);
     renderChildComments(c, op, c.kids);
   });
 }
 
-function highlight(node) {
-  node.parentNode.childNodes.forEach((n) => {
-    if (n.tagName === node.tagName) n.classList.remove(HIGHLIGHT);
-  });
-  node.classList.add(HIGHLIGHT);
-}
-
-function notNull(x) {
-  return x !== null;
+function highlight(candidate) {
+  Array.from(candidate.parentNode.children)
+    .filter((node) => node.tagName === candidate.tagName)
+    .forEach((node) => node.classList.remove(HIGHLIGHT_CLASS));
+  candidate.classList.add(HIGHLIGHT_CLASS);
 }
 
 async function getItem(id) {
   const cached = sessionStorage.getItem(id);
-  if (cached !== null) {
-    return JSON.parse(cached);
-  } else {
-    const requested = await requestItem(id);
-    cacheItem(requested);
-    return requested;
-  }
+  if (cached !== null) return JSON.parse(cached);
+  const requested = await requestItem(id);
+  cacheItem(requested);
+  return requested;
 }
 
 function requestItem(id) {
