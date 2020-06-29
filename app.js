@@ -16,7 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function refreshNewsList(alsoLoadComments) {
-  const storyType = localStorage.getItem("storyType").replace("stories", "") || "top";
+  const prevStoryType = localStorage.getItem("storyType");
+  const storyType = prevStoryType !== null ? prevStoryType.replace("stories", "") : "top";
   highlight(document.getElementById(storyType));
   const storyIds = await fetch(`${HACKER_NEWS_API}/${storyType}stories.json?limitToFirst=20&orderBy="$priority"`)
     .then(fetchStatus)
@@ -71,7 +72,7 @@ async function showComments(li) {
   async function renderCluster(kids, op, begin) {
     const end = begin + CLUSTER_SIZE;
     const currentCluster = kids.slice(begin, Math.min(end, kids.length));
-    const cs = await Promise.all(currentCluster.map((id) => requestComment(id, op)));
+    const cs = await Promise.all(currentCluster.map((id) => buildComment(id, op)));
     cs.filter((c) => c !== null).forEach((c) => comments.appendChild(c));
     if (end < kids.length) {
       loader.innerText = "Load more comments";
@@ -90,14 +91,11 @@ async function showComments(li) {
 }
 
 function renderHeader(item) {
+  const hostname = new URL(item.url).pathname;
   document.getElementById("header").innerHTML = `<p class="title-bar"><span><a class='title' href="${
     item.url || HACKER_NEWS_ITEM + item.id
   }">${item.title}</a>${
-    item.url
-      ? ` <span class="host">[<a href="${SEARCH + new URL(item.url).hostname}">${
-          new URL(item.url).hostname
-        }</a>]</span></span>`
-      : ""
+    item.url ? ` <span class="host">[<a href="${SEARCH + hostname}">${hostname}</a>]</span></span>` : ""
   }</span><span class="right">${item.url ? `<a href="${SEARCH + item.url}">⧉</a>&nbsp;` : ""}<a href="${
     HACKER_NEWS_ITEM + item.id
   }">${item.descendants && item.descendants > 0 ? item.descendants : "—"}</a></span></p>${
@@ -109,7 +107,7 @@ function renderItemText(item, op) {
   return `${item.text} [<a ${op === item.by ? 'class="op"' : ""} href="${HACKER_NEWS_ITEM + item.id}">${item.by}</a>]`;
 }
 
-async function requestComment(id, op, loadKidsNow) {
+async function buildComment(id, op, loadKidsNow) {
   const item = await requestItem(id);
   if (item === null || item.deleted || item.dead) return null;
   const comment = document.createElement("details");
@@ -128,7 +126,7 @@ async function requestComment(id, op, loadKidsNow) {
 async function renderChildComments(comment, op, kids) {
   if (!Array.isArray(kids)) return;
   comment.classList.add(LOADING_CLASS);
-  const cs = await Promise.all(kids.map((id) => requestComment(id, op, true)));
+  const cs = await Promise.all(kids.map((id) => buildComment(id, op, true)));
   comment.classList.remove(LOADING_CLASS);
   cs.filter((c) => c !== null).forEach((c) => {
     comment.appendChild(c);
@@ -137,7 +135,7 @@ async function renderChildComments(comment, op, kids) {
 }
 
 function highlight(candidate) {
-  Array.from(candidate.parentNode.children)
+  Array.from(candidate.parentElement.children)
     .filter((node) => node.tagName === candidate.tagName)
     .forEach((node) => node.classList.remove(HIGHLIGHT_CLASS));
   candidate.classList.add(HIGHLIGHT_CLASS);
