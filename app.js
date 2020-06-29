@@ -91,7 +91,7 @@ async function showComments(li) {
 }
 
 function renderHeader(item) {
-  const hostname = new URL(item.url).pathname;
+  const hostname = new URL(item.url).hostname;
   document.getElementById("header").innerHTML = `<p class="title-bar"><span><a class='title' href="${
     item.url || HACKER_NEWS_ITEM + item.id
   }">${item.title}</a>${
