@@ -21,10 +21,10 @@ async function refreshNewsList(alsoLoadComments) {
   highlight(document.getElementById(storyType));
   const storyIds = await fetch(`${HACKER_NEWS_API}/${storyType}stories.json?limitToFirst=20&orderBy="$priority"`)
     .then(fetchStatus)
-    .then(json);
+    .then((response) => response.json());
   const prevHighlight = parseInt(localStorage.getItem(HIGHLIGHT_KEY));
   if (prevHighlight && !storyIds.includes(prevHighlight)) storyIds.push(prevHighlight);
-  const items = await Promise.all(storyIds.map(getItem));
+  const items = await Promise.all(storyIds.map((id) => getItem(id)));
   const newsList = document.getElementById("news-list");
   newsList.innerHTML = "";
   items.forEach((item) => {
@@ -76,13 +76,7 @@ async function showComments(li) {
     cs.filter((c) => c !== null).forEach((c) => comments.appendChild(c));
     if (end < kids.length) {
       loader.innerText = "Load more comments";
-      loader.addEventListener(
-        "click",
-        () => {
-          renderCluster(kids, op, end);
-        },
-        { once: true }
-      );
+      loader.addEventListener("click", () => renderCluster(kids, op, end), { once: true });
       loader.classList.remove("hidden");
     } else {
       loader.classList.add("hidden");
@@ -108,7 +102,7 @@ function renderItemText(item, op) {
 }
 
 async function buildComment(id, op, loadKidsNow) {
-  const item = await requestItem(id);
+  const item = await getItem(id, (item) => item.time < Date.now() - 7.2e6);
   if (item === null || item.deleted || item.dead) return null;
   const comment = document.createElement("details");
   const commentText = comment.appendChild(document.createElement("summary"));
@@ -141,16 +135,22 @@ function highlight(candidate) {
   candidate.classList.add(HIGHLIGHT_CLASS);
 }
 
-async function getItem(id) {
+async function getItem(id, cachePredicate) {
+  cachePredicate = Function(cachePredicate);
   const cached = sessionStorage.getItem(id);
-  if (cached !== null) return JSON.parse(cached);
+  if (cached !== null) {
+    let cachedItem = JSON.parse(cached);
+    if (cachePredicate(cachedItem)) return cachedItem;
+  }
   const requested = await requestItem(id);
   cacheItem(requested);
   return requested;
 }
 
-function requestItem(id) {
-  return fetch(`${HACKER_NEWS_API}/item/${id}.json`).then(fetchStatus).then(json);
+async function requestItem(id) {
+  const fetchResponse = await fetch(`${HACKER_NEWS_API}/item/${id}.json`);
+  const response = await fetchStatus(fetchResponse);
+  return response.json();
 }
 
 function cacheItem(item) {
@@ -163,8 +163,4 @@ function fetchStatus(response) {
   } else {
     return Promise.reject(new Error(response.statusText));
   }
-}
-
-function json(response) {
-  return response.json();
 }
