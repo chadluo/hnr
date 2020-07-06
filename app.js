@@ -29,11 +29,11 @@ async function refreshNewsList(alsoLoadComments) {
   newsList.innerHTML = "";
   items.forEach((item) => {
     const li = newsList.appendChild(document.createElement("li"));
-    li.innerText = item.title;
+    renderTitle(item, li);
     li.dataset.id = item.id;
     if (item.id === prevHighlight) {
       li.classList.add(HIGHLIGHT_CLASS);
-      if (alsoLoadComments) showComments(li);
+      if (alsoLoadComments) renderComments(li);
     }
   });
 }
@@ -50,10 +50,10 @@ document.getElementById("news-list").addEventListener("click", (event) => {
   if (event.target.tagName !== "LI") return;
   const li = event.target;
   highlight(li);
-  showComments(li);
+  renderComments(li);
 });
 
-async function showComments(li) {
+async function renderComments(li) {
   const comments = document.getElementById("comments");
   comments.innerText = "";
   const loader = document.getElementById("load-cluster");
@@ -62,7 +62,7 @@ async function showComments(li) {
   localStorage.setItem(HIGHLIGHT_KEY, itemId);
   comments.classList.add(LOADING_CLASS);
   const item = await requestItem(itemId);
-  li.innerText = item.title;
+  renderTitle(item, li);
   renderHeader(item);
   comments.classList.remove(LOADING_CLASS);
   if (!("kids" in item)) return;
@@ -84,11 +84,16 @@ async function showComments(li) {
   }
 }
 
+function renderTitle(item, li) {
+  li.innerText = item.title;
+  if (item.type === "job") li.classList.add("job");
+}
+
 function renderHeader(item) {
   const hostname = item.url ? new URL(item.url).hostname : undefined;
-  document.getElementById("header").innerHTML = `<p class="title-bar"><span><a class='title' href="${
-    item.url || HACKER_NEWS_ITEM + item.id
-  }">${item.title}</a>${
+  document.getElementById("header").innerHTML = `<p class="title-bar"><span><a class='title ${
+    item.type === "job" ? "job" : ""
+  }' href="${item.url || HACKER_NEWS_ITEM + item.id}">${item.title}</a>${
     item.url ? ` <span class="host">[<a href="${SEARCH + hostname}">${hostname}</a>]</span></span>` : ""
   }</span><span class="right">${item.url ? `<a href="${SEARCH + item.url}">⧉</a>&nbsp;` : ""}<a href="${
     HACKER_NEWS_ITEM + item.id

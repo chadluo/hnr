@@ -61,6 +61,9 @@ main {
   border-radius: 3px;
   cursor: pointer;
 }
+.job::before {
+  content: "👋 "; /* caduceus */
+}
 #news-list .highlight {
   background: var(--hacker-news-theme);
   color: white;
