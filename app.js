@@ -11,11 +11,11 @@ const CLUSTER_SIZE = 10;
 document.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
   if (params.has("i")) localStorage.setItem(HIGHLIGHT_KEY, params.get("i"));
-  refreshNewsList(true);
+  refreshNewsList();
   setInterval(refreshNewsList, 60 * 1000);
 });
 
-async function refreshNewsList(alsoLoadComments) {
+async function refreshNewsList() {
   const prevStoryType = localStorage.getItem("storyType");
   const storyType = prevStoryType !== null ? prevStoryType.replace("stories", "") : "top";
   highlight(document.getElementById(storyType));
@@ -31,10 +31,7 @@ async function refreshNewsList(alsoLoadComments) {
     const li = newsList.appendChild(document.createElement("li"));
     renderTitle(item, li);
     li.dataset.id = item.id;
-    if (item.id === prevHighlight) {
-      li.classList.add(HIGHLIGHT_CLASS);
-      if (alsoLoadComments) renderComments(li);
-    }
+    if (item.id === prevHighlight) li.classList.add(HIGHLIGHT_CLASS);
   });
 }
 
@@ -48,12 +45,14 @@ document.getElementById("stories-picker").addEventListener("click", (event) => {
 
 document.getElementById("news-list").addEventListener("click", (event) => {
   if (event.target.tagName !== "LI") return;
+  document.getElementById("news").classList.add("hidden");
   const li = event.target;
   highlight(li);
   renderComments(li);
 });
 
 async function renderComments(li) {
+  document.getElementById("contents").classList.remove("hidden");
   const comments = document.getElementById("comments");
   comments.innerText = "";
   const loader = document.getElementById("load-cluster");
@@ -139,6 +138,11 @@ function highlight(candidate) {
     .forEach((node) => node.classList.remove(HIGHLIGHT_CLASS));
   candidate.classList.add(HIGHLIGHT_CLASS);
 }
+
+document.getElementById("hide").addEventListener("click", () => {
+  document.getElementById("contents").classList.add("hidden");
+  document.getElementById("news").classList.remove("hidden");
+});
 
 async function getItem(id, cachePredicate) {
   cachePredicate = Function(cachePredicate);

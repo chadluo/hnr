@@ -41,14 +41,9 @@ h1 {
   font-weight: bold;
 }
 main {
-  max-width: 60rem;
+  max-width: 40rem;
   margin: auto;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  column-gap: 2rem;
-}
-.contents {
-  grid-column: span 2;
+  position: static;
 }
 #news-list {
   padding: 0;
@@ -130,7 +125,7 @@ code {
 .op {
   font-weight: bold;
 }
-#load-cluster {
+.pointer {
   cursor: pointer;
 }
 .hidden {
