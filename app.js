@@ -84,8 +84,11 @@ async function renderComments(li) {
 }
 
 function renderTitle(item, li) {
-  li.innerText = item.title;
-  if (item.type === "job") li.classList.add("job");
+  if (item.type === "job") {
+    li.innerHTML = `<a href="${item.url}" class="job">${item.title}</a>`;
+  } else {
+    li.innerText = item.title;
+  }
 }
 
 function renderHeader(item) {
@@ -93,7 +96,7 @@ function renderHeader(item) {
   document.getElementById("header").innerHTML = `<p class="title-bar"><span><a class='title ${
     item.type === "job" ? "job" : ""
   }' href="${item.url || HACKER_NEWS_ITEM + item.id}">${item.title}</a>${
-    item.url ? ` <span class="host">[<a href="${SEARCH + hostname}">${hostname}</a>]</span></span>` : ""
+    item.url ? ` <span class="host">[<a href="${SEARCH + hostname}">${hostname}</a>]</span>` : ""
   }</span><span class="right">${item.url ? `<a href="${SEARCH + item.url}">⧉</a>&nbsp;` : ""}<a href="${
     HACKER_NEWS_ITEM + item.id
   }">${item.descendants && item.descendants > 0 ? item.descendants : "—"}</a></span></p>${
