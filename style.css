@@ -115,6 +115,7 @@ summary::-webkit-details-marker {
 pre {
   font-size: calc(var(--hnr-baseline-grid) * 2 / 3);
   line-height: 1;
+  white-space: pre-line;
 }
 code {
   font-family: var(--hnr-mono);
