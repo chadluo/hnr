@@ -9,7 +9,7 @@
 }
 body {
   font: 1rem / var(--hnr-baseline-grid) var(--hnr-sans);
-  margin: 2rem;
+  margin: 2rem 1rem;
   text-rendering: geometricPrecision;
 }
 a {
@@ -27,6 +27,7 @@ h1 {
   font-size: 1rem;
   display: inline;
   margin: 0;
+  text-align: right;
 }
 #stories-picker {
   margin-top: 0;
