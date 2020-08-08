@@ -24,15 +24,17 @@ a:hover {
   text-decoration: underline;
 }
 h1 {
-  text-align: center;
-  font: 3rem/1 "Cinzel", serif;
-  font-weight: 400;
-  margin: calc(var(--hnr-baseline-grid) * 5) 0 calc(var(--hnr-baseline-grid) * 4);
-  letter-spacing: 0.1em;
+  font-size: 1rem;
+  display: inline;
+  margin: 0;
 }
 #stories-picker {
   margin-top: 0;
   margin-bottom: calc(var(--hnr-baseline-grid) - var(--hnr-news-item-gap-top));
+  display: flex;
+}
+#stories-picker span {
+  flex-grow: 1;
 }
 #stories-picker a {
   cursor: pointer;
@@ -57,7 +59,7 @@ main {
   cursor: pointer;
 }
 .job::before {
-  content: "👋 "; /* caduceus */
+  content: "👋 ";
 }
 #news-list .highlight {
   background: var(--hacker-news-theme);
@@ -127,6 +129,9 @@ code {
 }
 .pointer {
   cursor: pointer;
+}
+.pointer:hover {
+  text-decoration: none;
 }
 .hidden {
   display: none;

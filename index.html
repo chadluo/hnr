@@ -2,28 +2,27 @@
 <meta charset="UTF-8" />
 <meta content="width=device-width, initial-scale=1.0" name="viewport" />
 <title>Hacker News</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://use.typekit.net/gbx7fns.css" />
 <link rel="stylesheet" href="style.css" />
-<h1>Hacker News</h1>
 <main>
-  <nav id="news">
-    <p id="stories-picker">
-      <a id="top">Top</a>&ensp;<a id="new">New</a>&ensp;<a id="best">Best</a>&ensp;<a id="ask">Ask</a>&ensp;<a id="show"
-        >Show</a
-      >&ensp;<a id="job">Job</a>
-    </p>
-    <ul id="news-list">
-      loading…
-    </ul>
+  <div id="news">
+    <nav id="stories-picker">
+      <span
+        ><a id="top">Top</a>&ensp;<a id="new">New</a>&ensp;<a id="best">Best</a>&ensp;<a id="ask">Ask</a>&ensp;<a
+          id="show"
+          >Show</a
+        >&ensp;<a id="job">Job</a></span
+      >
+      <h1>Hacker News</h1>
+    </nav>
+    <ul id="news-list"></ul>
     <footer>
       <a href="https://news.ycombinator.com/news">Hacker News</a>&ensp;<a href="https://github.com/hackernews/api"
         >API</a
       >&ensp;<a href="https://github.com/chadluo/hnr">Repo</a>
     </footer>
-  </nav>
+  </div>
   <section id="contents" class="contents hidden">
-    <a id="hide" class="pointer">&#x1f5d9;</a>
     <header id="header"><span class="title">Hacker News</span></header>
     <div id="comments">comments</div>
     <p><a id="load-cluster" class="pointer"></a></p>

@@ -19,7 +19,7 @@ async function refreshNewsList() {
   const prevStoryType = localStorage.getItem("storyType");
   const storyType = prevStoryType !== null ? prevStoryType.replace("stories", "") : "top";
   highlight(document.getElementById(storyType));
-  const storyIds = await fetch(`${HACKER_NEWS_API}/${storyType}stories.json?limitToFirst=20&orderBy="$priority"`)
+  const storyIds = await fetch(`${HACKER_NEWS_API}/${storyType}stories.json?limitToFirst=30&orderBy="$priority"`)
     .then(fetchStatus)
     .then((response) => response.json());
   const prevHighlight = parseInt(localStorage.getItem(HIGHLIGHT_KEY));
@@ -93,7 +93,9 @@ function renderTitle(item, li) {
 
 function renderHeader(item) {
   const hostname = item.url ? new URL(item.url).hostname : undefined;
-  document.getElementById("header").innerHTML = `<p class="title-bar"><span><a class='title ${
+  document.getElementById(
+    "header"
+  ).innerHTML = `<p class="title-bar"><span><a onclick="closeComments()" class="pointer">&#x1f5d9;</a>&ensp;<a class='title ${
     item.type === "job" ? "job" : ""
   }' href="${item.url || HACKER_NEWS_ITEM + item.id}">${item.title}</a>${
     item.url ? ` <span class="host">[<a href="${SEARCH + hostname}">${hostname}</a>]</span>` : ""
@@ -142,10 +144,11 @@ function highlight(candidate) {
   candidate.classList.add(HIGHLIGHT_CLASS);
 }
 
-document.getElementById("hide").addEventListener("click", () => {
+// eslint-disable-next-line no-unused-vars
+function closeComments() {
   document.getElementById("contents").classList.add("hidden");
   document.getElementById("news").classList.remove("hidden");
-});
+}
 
 async function getItem(id, cachePredicate) {
   cachePredicate = Function(cachePredicate);
