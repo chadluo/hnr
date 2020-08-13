@@ -7,12 +7,15 @@ const HIGHLIGHT_CLASS = "highlight";
 const HIGHLIGHT_KEY = "highlight";
 const LOADING_CLASS = "loading";
 const CLUSTER_SIZE = 10;
+const REFRESH_INTERVAL = 60000;
+
+let refreshLoopId;
 
 document.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
   if (params.has("i")) localStorage.setItem(HIGHLIGHT_KEY, params.get("i"));
   refreshNewsList();
-  setInterval(refreshNewsList, 60 * 1000);
+  refreshLoopId = setInterval(refreshNewsList, REFRESH_INTERVAL);
 });
 
 async function refreshNewsList() {
@@ -49,6 +52,7 @@ document.getElementById("news-list").addEventListener("click", (event) => {
   const li = event.target;
   highlight(li);
   renderComments(li);
+  clearInterval(refreshLoopId);
 });
 
 async function renderComments(li) {
@@ -148,6 +152,7 @@ function highlight(candidate) {
 function closeComments() {
   document.getElementById("contents").classList.add("hidden");
   document.getElementById("news").classList.remove("hidden");
+  refreshLoopId = setInterval(refreshNewsList, REFRESH_INTERVAL);
 }
 
 async function getItem(id, cachePredicate) {
